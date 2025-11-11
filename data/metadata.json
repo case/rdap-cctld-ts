@@ -1,0 +1,21 @@
+{
+  "iana-root-zone-db.html": {
+    "url": "https://www.iana.org/domains/root/db",
+    "cacheMaxAge": 21603,
+    "downloadedAt": "2025-11-11T20:32:30.751Z"
+  },
+  "iana-rdap-bootstrap.json": {
+    "url": "https://data.iana.org/rdap/dns.json",
+    "etag": "\"1182e-642f50662aab6-gzip\"",
+    "lastModified": "Thu, 06 Nov 2025 23:00:01 GMT",
+    "cacheMaxAge": 17471,
+    "downloadedAt": "2025-11-11T20:32:57.035Z"
+  },
+  "iana-tlds.txt": {
+    "url": "https://data.iana.org/TLD/tlds-alpha-by-domain.txt",
+    "etag": "\"2548-6434c4b5b98fa-gzip\"",
+    "lastModified": "Tue, 11 Nov 2025 07:07:01 GMT",
+    "cacheMaxAge": 309,
+    "downloadedAt": "2025-11-11T20:32:57.087Z"
+  }
+}
