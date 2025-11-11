@@ -3,6 +3,7 @@
  */
 
 import { toUnicode } from "ts-punycode";
+import { DOMParser } from "@b-fuze/deno-dom";
 
 /**
  * Determine if a TLD is a ccTLD (country code TLD).
@@ -72,4 +73,67 @@ export function parse_bootstrap_tlds(services: unknown[]): string[] {
   }
 
   return tlds;
+}
+
+/**
+ * TLD entry with type information from Root Zone DB
+ */
+export interface TldEntry {
+  tld: string;
+  type: "generic" | "country-code" | "sponsored" | "infrastructure" | "test" | "generic-restricted";
+}
+
+/**
+ * Parse TLDs from IANA Root Zone Database HTML.
+ *
+ * @param content - The HTML content of the Root Zone Database
+ * @returns List of TLD entries with their types
+ */
+export function parse_root_zone_db(content: string): TldEntry[] {
+  const doc = new DOMParser().parseFromString(content, "text/html");
+  const entries: TldEntry[] = [];
+
+  // Find all table rows with TLD data
+  const rows = doc.querySelectorAll("table#tld-table tbody tr");
+
+  for (const row of rows) {
+    // Each row has: <span class="domain tld"><a href="...">.<tld></a></span> in first td
+    // and type in second td
+    const tldLink = row.querySelector('span.domain.tld a[href^="/domains/root/db/"]');
+    const typeCell = row.querySelectorAll("td")[1];
+
+    if (tldLink && typeCell) {
+      const tldText = tldLink.textContent?.trim();
+      const typeText = typeCell.textContent?.trim();
+
+      if (tldText && typeText) {
+        // Remove leading dot and convert to lowercase
+        const tld = tldText.replace(/^\./, "").toLowerCase();
+
+        // Map type text to our type enum
+        let type: TldEntry["type"];
+        if (typeText === "country-code") {
+          type = "country-code";
+        } else if (typeText === "generic") {
+          type = "generic";
+        } else if (typeText === "sponsored") {
+          type = "sponsored";
+        } else if (typeText === "infrastructure") {
+          type = "infrastructure";
+        } else if (typeText === "test") {
+          type = "test";
+        } else if (typeText === "generic-restricted") {
+          type = "generic-restricted";
+        } else {
+          // Unknown type - log error and skip this entry
+          console.error(`Unknown TLD type '${typeText}' for TLD '${tld}' - skipping entry`);
+          continue;
+        }
+
+        entries.push({ tld, type });
+      }
+    }
+  }
+
+  return entries;
 }

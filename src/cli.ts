@@ -4,17 +4,22 @@ import {
   download_iana_root_zone_db,
   download_iana_tlds,
 } from "./main.ts";
+import {
+  analyze_rdap_bootstrap,
+  analyze_root_zone_db,
+  analyze_tlds_file,
+} from "./analyze.ts";
 
 /**
- * Valid download types
+ * Valid data source types
  */
-const DOWNLOAD_TYPES = [
+const SOURCE_TYPES = [
   "rdap-bootstrap",
   "tlds-txt",
   "root-zone-db-html",
 ] as const;
 
-type DownloadType = typeof DOWNLOAD_TYPES[number];
+type SourceType = typeof SOURCE_TYPES[number];
 
 /**
  * Main CLI entry point
@@ -22,10 +27,11 @@ type DownloadType = typeof DOWNLOAD_TYPES[number];
 async function main() {
   const args = parseArgs(Deno.args, {
     boolean: ["help"],
-    string: ["download"],
+    string: ["download", "analyze"],
     alias: {
       h: "help",
       d: "download",
+      a: "analyze",
     },
   });
 
@@ -36,6 +42,7 @@ Usage: deno run src/cli.ts [options]
 
 Options:
   --download <type>, -d <type>  Download IANA data file
+  --analyze <type>, -a <type>   Analyze IANA data file
     Types:
       rdap-bootstrap       IANA RDAP bootstrap file (JSON)
       tlds-txt             IANA TLD list (text)
@@ -45,25 +52,27 @@ Options:
 Examples:
   deno task cli --download rdap-bootstrap
   deno task cli --download tlds-txt
-  deno task cli --download root-zone-db-html
+  deno task cli --analyze rdap-bootstrap
+  deno task cli --analyze root-zone-db-html
   deno task cli -d rdap-bootstrap
+  deno task cli -a tlds-txt
     `);
     return;
   }
 
   // Handle download command
   if (args.download) {
-    const downloadType = args.download as string;
+    const sourceType = args.download as string;
 
-    if (!DOWNLOAD_TYPES.includes(downloadType as DownloadType)) {
-      console.error(`Error: Invalid download type '${downloadType}'`);
+    if (!SOURCE_TYPES.includes(sourceType as SourceType)) {
+      console.error(`Error: Invalid source type '${sourceType}'`);
       console.error(
-        `Valid types: ${DOWNLOAD_TYPES.join(", ")}`,
+        `Valid types: ${SOURCE_TYPES.join(", ")}`,
       );
       Deno.exit(1);
     }
 
-    switch (downloadType as DownloadType) {
+    switch (sourceType as SourceType) {
       case "rdap-bootstrap":
         await download_iana_rdap_bootstrap();
         break;
@@ -73,6 +82,63 @@ Examples:
       case "root-zone-db-html":
         await download_iana_root_zone_db();
         break;
+    }
+  }
+
+  // Handle analyze command
+  if (args.analyze) {
+    const sourceType = args.analyze as string;
+
+    if (!SOURCE_TYPES.includes(sourceType as SourceType)) {
+      console.error(`Error: Invalid source type '${sourceType}'`);
+      console.error(
+        `Valid types: ${SOURCE_TYPES.join(", ")}`,
+      );
+      Deno.exit(1);
+    }
+
+    switch (sourceType as SourceType) {
+      case "rdap-bootstrap": {
+        const content = await Deno.readTextFile("data/source/iana-rdap-bootstrap.json");
+        const data = JSON.parse(content);
+        const analysis = analyze_rdap_bootstrap(data.services);
+
+        console.log("\n=== RDAP Bootstrap Analysis ===");
+        console.log(`Total TLDs:    ${analysis.total}`);
+        console.log(`ccTLDs:        ${analysis.ccTlds}`);
+        console.log(`gTLDs:         ${analysis.gTlds}`);
+        console.log(`IDNs:          ${analysis.idns}`);
+        break;
+      }
+      case "tlds-txt": {
+        const content = await Deno.readTextFile("data/source/iana-tlds.txt");
+        const analysis = analyze_tlds_file(content);
+
+        console.log("\n=== TLD List Analysis ===");
+        console.log(`Total TLDs:    ${analysis.total}`);
+        console.log(`ccTLDs:        ${analysis.ccTlds}`);
+        console.log(`gTLDs:         ${analysis.gTlds}`);
+        console.log(`IDNs:          ${analysis.idns}`);
+        break;
+      }
+      case "root-zone-db-html": {
+        const content = await Deno.readTextFile("data/source/iana-root-zone-db.html");
+        const analysis = analyze_root_zone_db(content);
+
+        console.log("\n=== Root Zone Database Analysis ===");
+        console.log(`Total TLDs:    ${analysis.total}`);
+        console.log(`ccTLDs:        ${analysis.ccTlds}`);
+        console.log(`gTLDs:         ${analysis.gTlds}`);
+        console.log(`IDNs:          ${analysis.idns}`);
+        console.log("\nTLDs by Category:");
+        console.log(`  Country-code:       ${analysis.byCategory["country-code"]}`);
+        console.log(`  Generic:            ${analysis.byCategory["generic"]}`);
+        console.log(`  Sponsored:          ${analysis.byCategory["sponsored"]}`);
+        console.log(`  Generic-restricted: ${analysis.byCategory["generic-restricted"]}`);
+        console.log(`  Infrastructure:     ${analysis.byCategory["infrastructure"]}`);
+        console.log(`  Test:               ${analysis.byCategory["test"]}`);
+        break;
+      }
     }
   }
 }
