@@ -164,28 +164,28 @@ export async function download(
 }
 
 /**
- * Saves data to a file in the data directory
+ * Saves data to a file in the data/source directory
  * @param data - The data to save (as ArrayBuffer or Uint8Array)
- * @param filename - The name to save the file as (will be saved to data/{filename})
+ * @param filename - The name to save the file as (will be saved to data/source/{filename})
  * @returns Promise that resolves when save is complete
  */
 export async function save_to_file(
   data: ArrayBuffer | Uint8Array,
   filename: string,
 ): Promise<void> {
-  const outputPath = `data/${filename}`;
+  const outputPath = `data/source/${filename}`;
 
   try {
-    // Ensure the data directory exists
-    await Deno.mkdir("data", { recursive: true });
+    // Ensure the data/source directory exists
+    await Deno.mkdir("data/source", { recursive: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`Failed to create data directory: ${message}`);
-    throw new Error(`Failed to create data directory: ${message}`);
+    console.error(`Failed to create data/source directory: ${message}`);
+    throw new Error(`Failed to create data/source directory: ${message}`);
   }
 
   try {
-    // Write the file to data/{filename}
+    // Write the file to data/source/{filename}
     const uint8Data = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
     await Deno.writeFile(outputPath, uint8Data);
     console.log(`Saved file to ${outputPath}`);
