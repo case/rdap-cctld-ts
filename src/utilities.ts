@@ -79,9 +79,10 @@ function is_cache_fresh(metadata: DownloadMetadata): boolean {
 /**
  * Downloads a file from a URL and returns the data
  * Uses conditional requests (If-None-Match/If-Modified-Since) when filename is provided
+ * Falls back to Cache-Control max-age checks if no ETag/Last-Modified available
  * @param url - The URL to download from
  * @param filename - Optional filename for conditional request tracking
- * @returns Promise that resolves with the downloaded data, or null if file hasn't changed (304)
+ * @returns Promise that resolves with the downloaded data, or null if unchanged (304 or cache fresh)
  */
 export async function download(
   url: string,

@@ -82,7 +82,7 @@ export function validate_iana_tlds(data: ArrayBuffer): string {
     );
   }
 
-  // Check 4: Basic format validation - TLDs should be alphanumeric
+  // Check 4: Basic format validation - TLDs should be alphanumeric with hyphens
   const invalidTlds = tlds.filter((tld) => !/^[a-zA-Z0-9\-]+$/.test(tld));
   if (invalidTlds.length > 0) {
     throw new Error(
