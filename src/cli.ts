@@ -6,18 +6,26 @@ import {
 } from "./main.ts";
 
 /**
+ * Valid download types
+ */
+const DOWNLOAD_TYPES = [
+  "rdap-bootstrap",
+  "tlds-txt",
+  "root-zone-db-html",
+] as const;
+
+type DownloadType = typeof DOWNLOAD_TYPES[number];
+
+/**
  * Main CLI entry point
  */
 async function main() {
   const args = parseArgs(Deno.args, {
-    boolean: [
-      "help",
-      "download-rdap-bootstrap",
-      "download-tlds",
-      "download-root-zone-db",
-    ],
+    boolean: ["help"],
+    string: ["download"],
     alias: {
       h: "help",
+      d: "download",
     },
   });
 
@@ -27,32 +35,45 @@ async function main() {
 Usage: deno run src/cli.ts [options]
 
 Options:
-  --download-rdap-bootstrap    Download IANA RDAP bootstrap file
-  --download-tlds              Download IANA TLD list
-  --download-root-zone-db      Download IANA Root Zone Database
-  --help, -h                   Show this help message
+  --download <type>, -d <type>  Download IANA data file
+    Types:
+      rdap-bootstrap       IANA RDAP bootstrap file (JSON)
+      tlds-txt             IANA TLD list (text)
+      root-zone-db-html    IANA Root Zone Database (HTML)
+  --help, -h                    Show this help message
 
 Examples:
-  deno task cli --download-rdap-bootstrap
-  deno task cli --download-tlds
-  deno task cli --download-root-zone-db
+  deno task cli --download rdap-bootstrap
+  deno task cli --download tlds-txt
+  deno task cli --download root-zone-db-html
+  deno task cli -d rdap-bootstrap
     `);
     return;
   }
 
-  // Handle download RDAP bootstrap command
-  if (args["download-rdap-bootstrap"]) {
-    await download_iana_rdap_bootstrap();
-  }
+  // Handle download command
+  if (args.download) {
+    const downloadType = args.download as string;
 
-  // Handle download TLDs command
-  if (args["download-tlds"]) {
-    await download_iana_tlds();
-  }
+    if (!DOWNLOAD_TYPES.includes(downloadType as DownloadType)) {
+      console.error(`Error: Invalid download type '${downloadType}'`);
+      console.error(
+        `Valid types: ${DOWNLOAD_TYPES.join(", ")}`,
+      );
+      Deno.exit(1);
+    }
 
-  // Handle download Root Zone DB command
-  if (args["download-root-zone-db"]) {
-    await download_iana_root_zone_db();
+    switch (downloadType as DownloadType) {
+      case "rdap-bootstrap":
+        await download_iana_rdap_bootstrap();
+        break;
+      case "tlds-txt":
+        await download_iana_tlds();
+        break;
+      case "root-zone-db-html":
+        await download_iana_root_zone_db();
+        break;
+    }
   }
 }
 
