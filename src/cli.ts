@@ -6,6 +6,7 @@ import {
 } from "./main.ts";
 import {
   analyze_rdap_bootstrap,
+  analyze_rdap_coverage,
   analyze_root_zone_db,
   analyze_tlds_file,
   compare_bootstrap_vs_rootzone,
@@ -271,6 +272,51 @@ Examples:
         } │`,
       );
       console.log("└─────────────────────┴─────────────┘");
+
+      // RDAP Coverage Analysis
+      const rdapCoverage = await analyze_rdap_coverage(
+        rdapData.services,
+        rootZoneContent,
+      );
+
+      console.log();
+      console.log("RDAP Details - Delegated gTLDs without RDAP servers:");
+      console.log("┌─────────────────────┬─────────────┐");
+      console.log("│ Metric              │       Count │");
+      console.log("├─────────────────────┼─────────────┤");
+      console.log(
+        `│ Total gTLDs         │ ${
+          String(rdapCoverage.totalDelegatedGTlds).padStart(11)
+        } │`,
+      );
+      console.log(
+        `│ With RDAP servers   │ ${
+          String(rdapCoverage.gTldsWithRdap).padStart(11)
+        } │`,
+      );
+      console.log(
+        `│ Without RDAP        │ ${
+          String(rdapCoverage.gTldsWithoutRdap).padStart(11)
+        } │`,
+      );
+      console.log("└─────────────────────┴─────────────┘");
+
+      if (rdapCoverage.missingGTlds.length > 0) {
+        console.log();
+        console.log("Delegated gTLDs without RDAP servers:");
+        console.log("┌─────────────────────────────────────┬─────────────────────┐");
+        console.log("│ TLD                                 │ Type                │");
+        console.log("├─────────────────────────────────────┼─────────────────────┤");
+
+        for (const { tld, type } of rdapCoverage.missingGTlds) {
+          console.log(
+            `│ ${tld.padEnd(35)} │ ${type.padEnd(19)} │`,
+          );
+        }
+
+        console.log("└─────────────────────────────────────┴─────────────────────┘");
+      }
+
       console.log();
       return;
     }

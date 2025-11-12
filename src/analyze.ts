@@ -236,6 +236,82 @@ export async function compare_tld_sources(
 }
 
 /**
+ * RDAP coverage analysis results
+ */
+export interface RdapCoverageAnalysis {
+  totalDelegatedGTlds: number;
+  gTldsWithRdap: number;
+  gTldsWithoutRdap: number;
+  missingGTlds: Array<{
+    tld: string;
+    type: string;
+  }>;
+}
+
+/**
+ * Analyze RDAP coverage for delegated generic TLDs.
+ * Finds which delegated gTLDs don't have RDAP servers yet.
+ *
+ * @param rdapServices - Services array from RDAP bootstrap JSON
+ * @param rootZoneContent - HTML content of Root Zone Database
+ * @returns RDAP coverage analysis with missing gTLDs
+ */
+export async function analyze_rdap_coverage(
+  rdapServices: unknown[],
+  rootZoneContent: string,
+): Promise<RdapCoverageAnalysis> {
+  // Get TLDs from RDAP bootstrap (in punycode format)
+  const rdapTlds = new Set(parse_bootstrap_tlds(rdapServices));
+
+  // Get delegated entries from Root Zone DB
+  const rootZoneEntries = parse_root_zone_db(rootZoneContent);
+
+  // Filter for delegated generic TLDs only (non-ccTLD)
+  const delegatedGenericTlds = rootZoneEntries.filter(
+    (entry) => entry.delegated && entry.type !== "country-code"
+  );
+
+  // Import punycode converter
+  const { toASCII } = await import("ts-punycode");
+
+  // Find which delegated generics are missing from RDAP
+  // Need to check both Unicode and punycode versions
+  const missingDelegatedGenerics = delegatedGenericTlds.filter(
+    (entry) => {
+      // Check if the TLD exists in RDAP as-is
+      if (rdapTlds.has(entry.tld)) {
+        return false;
+      }
+
+      // If it's not punycode already, try converting to punycode
+      if (!entry.tld.startsWith("xn--")) {
+        try {
+          const punycode = toASCII(entry.tld);
+          if (rdapTlds.has(punycode)) {
+            return false;
+          }
+        } catch (error) {
+          // If conversion fails, we'll consider it missing
+          console.error(`Failed to convert '${entry.tld}' to punycode: ${error}`);
+        }
+      }
+
+      return true;
+    }
+  );
+
+  return {
+    totalDelegatedGTlds: delegatedGenericTlds.length,
+    gTldsWithRdap: delegatedGenericTlds.length - missingDelegatedGenerics.length,
+    gTldsWithoutRdap: missingDelegatedGenerics.length,
+    missingGTlds: missingDelegatedGenerics.map((entry) => ({
+      tld: entry.tld,
+      type: entry.type,
+    })).sort((a, b) => a.tld.localeCompare(b.tld)),
+  };
+}
+
+/**
  * Bootstrap vs Root Zone comparison results
  */
 export interface BootstrapVsRootZoneComparison {
