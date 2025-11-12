@@ -10,7 +10,7 @@
     "cli": "deno run --allow-net=data.iana.org,www.iana.org --allow-read=./data --allow-write=./data src/cli.ts",
     "download-bootstrap": "deno run --allow-net=data.iana.org,www.iana.org --allow-read=./data --allow-write=./data src/main.ts",
     "test": "deno test --allow-read --allow-import",
-    "test:coverage": "deno test --allow-read --allow-import --coverage=cov_profile && deno coverage cov_profile"
+    "test:coverage": "deno test --allow-read --allow-import --coverage=cov_profile"
   },
   "compilerOptions": {
     "noImplicitAny": false,
