@@ -2,7 +2,7 @@
   "iana-root-zone-db.html": {
     "url": "https://www.iana.org/domains/root/db",
     "cacheMaxAge": 21603,
-    "downloadedAt": "2025-11-11T20:32:30.751Z"
+    "downloadedAt": "2025-11-12T06:02:57.103Z"
   },
   "iana-rdap-bootstrap.json": {
     "url": "https://data.iana.org/rdap/dns.json",
