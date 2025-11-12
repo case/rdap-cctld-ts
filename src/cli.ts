@@ -45,10 +45,10 @@ async function main() {
 Usage: deno run src/cli.ts [options]
 
 Options:
-  --download <type>, -d <type>  Download IANA data file
+  --download [type], -d [type]  Download IANA data file(s)
   --analyze [type], -a [type]   Analyze IANA data file(s)
     Types:
-      (none)               Compare all three data sources
+      (none)               Download/analyze all data sources
       rdap-bootstrap       IANA RDAP bootstrap file (JSON)
       tlds-txt             IANA TLD list (text)
       root-zone-db-html    IANA Root Zone Database (HTML)
@@ -57,12 +57,14 @@ Options:
   --help, -h                    Show this help message
 
 Examples:
+  deno task cli --download
   deno task cli --download rdap-bootstrap
   deno task cli --download tlds-txt
   deno task cli --analyze
   deno task cli --analyze rdap-bootstrap
   deno task cli --analyze bootstrap-vs-rootdb
   deno task cli --analyze tlds-vs-rootdb
+  deno task cli -d
   deno task cli -d rdap-bootstrap
   deno task cli -a tlds-txt
     `);
@@ -70,9 +72,20 @@ Examples:
   }
 
   // Handle download command
-  if (args.download) {
+  if (args.download !== undefined) {
     const sourceType = args.download as string;
 
+    // If no specific type provided, download all three files
+    if (sourceType === true || sourceType === "") {
+      console.log("Downloading all IANA data files...\n");
+      await download_iana_tlds();
+      await download_iana_rdap_bootstrap();
+      await download_iana_root_zone_db();
+      console.log("\nAll downloads complete!");
+      return;
+    }
+
+    // Specific source type provided
     if (!SOURCE_TYPES.includes(sourceType as SourceType)) {
       console.error(`Error: Invalid source type '${sourceType}'`);
       console.error(
