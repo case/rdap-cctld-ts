@@ -3,7 +3,6 @@
  */
 
 import {
-  is_cctld,
   parse_bootstrap_tlds,
   parse_root_zone_db,
   parse_tlds_file,
@@ -24,7 +23,20 @@ export interface TldCounts {
  * Root Zone DB detailed analysis with category breakdown
  */
 export interface RootZoneAnalysis extends TldCounts {
+  delegated: number;
+  undelegated: number;
+  undelegatedCcTlds: number;
+  undelegatedGTlds: number;
+  delegatedCounts: TldCounts;
   byCategory: {
+    "country-code": number;
+    "generic": number;
+    "sponsored": number;
+    "infrastructure": number;
+    "test": number;
+    "generic-restricted": number;
+  };
+  delegatedByCategory: {
     "country-code": number;
     "generic": number;
     "sponsored": number;
@@ -42,15 +54,54 @@ function is_idn(tld: string): boolean {
 }
 
 /**
+ * Build a ccTLD lookup set from Root Zone DB (source of truth)
+ * Maps both punycode and unicode versions to country-code status
+ *
+ * @param rootZoneContent - HTML content of Root Zone Database
+ * @returns Set of TLDs that are country-code TLDs
+ */
+async function build_cctld_lookup(rootZoneContent: string): Promise<Set<string>> {
+  const entries = parse_root_zone_db(rootZoneContent);
+  const ccTlds = new Set<string>();
+  const { toASCII } = await import("ts-punycode");
+
+  for (const entry of entries) {
+    if (entry.type === "country-code") {
+      ccTlds.add(entry.tld);
+
+      // Also add punycode version if this is a Unicode TLD
+      if (!entry.tld.startsWith("xn--")) {
+        try {
+          const punycode = toASCII(entry.tld);
+          ccTlds.add(punycode);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error(`Failed to convert Unicode ccTLD '${entry.tld}' to punycode: ${message}`);
+        }
+      }
+    }
+  }
+
+  return ccTlds;
+}
+
+/**
  * Analyze TLD counts from the IANA TLD list file.
+ * Uses Root Zone DB as source of truth for ccTLD classification.
  *
  * @param content - The content of the TLD list file
+ * @param rootZoneContent - HTML content of Root Zone Database for ccTLD lookup
  * @returns TLD count summary
  */
-export function analyze_tlds_file(content: string): TldCounts {
+export async function analyze_tlds_file(
+  content: string,
+  rootZoneContent: string,
+): Promise<TldCounts> {
   const tlds = parse_tlds_file(content);
-  const ccTlds = tlds.filter((tld) => is_cctld(tld));
-  const gTlds = tlds.filter((tld) => !is_cctld(tld));
+  const ccTldLookup = await build_cctld_lookup(rootZoneContent);
+
+  const ccTlds = tlds.filter((tld) => ccTldLookup.has(tld));
+  const gTlds = tlds.filter((tld) => !ccTldLookup.has(tld));
   const idns = tlds.filter((tld) => is_idn(tld));
 
   return {
@@ -63,14 +114,21 @@ export function analyze_tlds_file(content: string): TldCounts {
 
 /**
  * Analyze TLD counts from the IANA RDAP bootstrap file.
+ * Uses Root Zone DB as source of truth for ccTLD classification.
  *
  * @param services - The services array from RDAP bootstrap JSON
+ * @param rootZoneContent - HTML content of Root Zone Database for ccTLD lookup
  * @returns TLD count summary
  */
-export function analyze_rdap_bootstrap(services: unknown[]): TldCounts {
+export async function analyze_rdap_bootstrap(
+  services: unknown[],
+  rootZoneContent: string,
+): Promise<TldCounts> {
   const tlds = parse_bootstrap_tlds(services);
-  const ccTlds = tlds.filter((tld) => is_cctld(tld));
-  const gTlds = tlds.filter((tld) => !is_cctld(tld));
+  const ccTldLookup = await build_cctld_lookup(rootZoneContent);
+
+  const ccTlds = tlds.filter((tld) => ccTldLookup.has(tld));
+  const gTlds = tlds.filter((tld) => !ccTldLookup.has(tld));
   const idns = tlds.filter((tld) => is_idn(tld));
 
   return {
@@ -90,14 +148,29 @@ export function analyze_rdap_bootstrap(services: unknown[]): TldCounts {
 export function analyze_root_zone_db(content: string): RootZoneAnalysis {
   const entries = parse_root_zone_db(content);
 
-  // Count by type from the Root Zone DB
+  // Count by type from the Root Zone DB (all entries)
   const ccTlds = entries.filter((entry) => entry.type === "country-code");
   const gTlds = entries.filter((entry) => entry.type !== "country-code");
 
   // Count IDNs (punycode encoded)
   const idns = entries.filter((entry) => is_idn(entry.tld));
 
-  // Count by category
+  // Count delegation status
+  const delegated = entries.filter((entry) => entry.delegated).length;
+  const undelegated = entries.filter((entry) => !entry.delegated).length;
+
+  // Count delegated-only TLDs (for apples-to-apples comparison)
+  const delegatedEntries = entries.filter((entry) => entry.delegated);
+  const delegatedCcTlds = delegatedEntries.filter((entry) => entry.type === "country-code");
+  const delegatedGTlds = delegatedEntries.filter((entry) => entry.type !== "country-code");
+  const delegatedIdns = delegatedEntries.filter((entry) => is_idn(entry.tld));
+
+  // Count undelegated TLDs by type
+  const undelegatedEntries = entries.filter((entry) => !entry.delegated);
+  const undelegatedCcTlds = undelegatedEntries.filter((entry) => entry.type === "country-code").length;
+  const undelegatedGTlds = undelegatedEntries.filter((entry) => entry.type !== "country-code").length;
+
+  // Count by category (all entries)
   const byCategory = {
     "country-code": entries.filter((e) => e.type === "country-code").length,
     "generic": entries.filter((e) => e.type === "generic").length,
@@ -107,35 +180,170 @@ export function analyze_root_zone_db(content: string): RootZoneAnalysis {
     "generic-restricted": entries.filter((e) => e.type === "generic-restricted").length,
   };
 
+  // Count by category (delegated only)
+  const delegatedByCategory = {
+    "country-code": delegatedEntries.filter((e) => e.type === "country-code").length,
+    "generic": delegatedEntries.filter((e) => e.type === "generic").length,
+    "sponsored": delegatedEntries.filter((e) => e.type === "sponsored").length,
+    "infrastructure": delegatedEntries.filter((e) => e.type === "infrastructure").length,
+    "test": delegatedEntries.filter((e) => e.type === "test").length,
+    "generic-restricted": delegatedEntries.filter((e) => e.type === "generic-restricted").length,
+  };
+
   return {
     total: entries.length,
     ccTlds: ccTlds.length,
     gTlds: gTlds.length,
     idns: idns.length,
+    delegated,
+    undelegated,
+    undelegatedCcTlds,
+    undelegatedGTlds,
+    delegatedCounts: {
+      total: delegatedEntries.length,
+      ccTlds: delegatedCcTlds.length,
+      gTlds: delegatedGTlds.length,
+      idns: delegatedIdns.length,
+    },
     byCategory,
+    delegatedByCategory,
   };
 }
 
 /**
  * Compare TLD counts across all three data sources.
+ * Uses Root Zone DB as source of truth for ccTLD classification.
  *
  * @param tldsFileContent - Content of the TLD list file
  * @param rdapServices - Services array from RDAP bootstrap JSON
  * @param rootZoneContent - HTML content of Root Zone Database
  * @returns Comparison object with counts from each source
  */
-export function compare_tld_sources(
+export async function compare_tld_sources(
   tldsFileContent: string,
   rdapServices: unknown[],
   rootZoneContent: string,
-): {
+): Promise<{
   tldsFile: TldCounts;
   rdapBootstrap: TldCounts;
-  rootZoneDb: TldCounts;
-} {
+  rootZoneDb: RootZoneAnalysis;
+}> {
   return {
-    tldsFile: analyze_tlds_file(tldsFileContent),
-    rdapBootstrap: analyze_rdap_bootstrap(rdapServices),
+    tldsFile: await analyze_tlds_file(tldsFileContent, rootZoneContent),
+    rdapBootstrap: await analyze_rdap_bootstrap(rdapServices, rootZoneContent),
     rootZoneDb: analyze_root_zone_db(rootZoneContent),
+  };
+}
+
+/**
+ * Bootstrap vs Root Zone comparison results
+ */
+export interface BootstrapVsRootZoneComparison {
+  rdapCount: number;
+  rootZoneCount: number;
+  inBoth: number;
+  onlyInRootZone: string[];
+  onlyInRdap: string[];
+  onlyInRootZoneByType: Map<string, string[]>;
+}
+
+/**
+ * TLDs txt vs Root Zone comparison results
+ */
+export interface TldsVsRootZoneComparison {
+  tldsCount: number;
+  rootZoneCount: number;
+  inBoth: number;
+  onlyInRootZone: string[];
+  onlyInTlds: string[];
+  onlyInRootZoneByType: Map<string, string[]>;
+}
+
+/**
+ * Compare RDAP Bootstrap TLDs vs Root Zone Database TLDs.
+ *
+ * @param rdapServices - Services array from RDAP bootstrap JSON
+ * @param rootZoneContent - HTML content of Root Zone Database
+ * @returns Comparison showing differences between the two sources
+ */
+export function compare_bootstrap_vs_rootzone(
+  rdapServices: unknown[],
+  rootZoneContent: string,
+): BootstrapVsRootZoneComparison {
+  // Get TLDs from RDAP bootstrap
+  const rdapTlds = new Set(parse_bootstrap_tlds(rdapServices));
+
+  // Get TLDs from Root Zone DB
+  const rootZoneEntries = parse_root_zone_db(rootZoneContent);
+  const rootZoneTlds = new Set(rootZoneEntries.map((e) => e.tld));
+
+  // Find differences
+  const onlyInRootZone = [...rootZoneTlds].filter((tld) => !rdapTlds.has(tld));
+  const onlyInRdap = [...rdapTlds].filter((tld) => !rootZoneTlds.has(tld));
+  const inBoth = rdapTlds.size - onlyInRdap.length;
+
+  // Group Root Zone only TLDs by type
+  const onlyInRootZoneByType = new Map<string, string[]>();
+  for (const tld of onlyInRootZone) {
+    const entry = rootZoneEntries.find((e) => e.tld === tld);
+    if (entry) {
+      const list = onlyInRootZoneByType.get(entry.type) || [];
+      list.push(tld);
+      onlyInRootZoneByType.set(entry.type, list);
+    }
+  }
+
+  return {
+    rdapCount: rdapTlds.size,
+    rootZoneCount: rootZoneTlds.size,
+    inBoth,
+    onlyInRootZone: onlyInRootZone.sort(),
+    onlyInRdap: onlyInRdap.sort(),
+    onlyInRootZoneByType,
+  };
+}
+
+/**
+ * Compare TLDs txt file vs Root Zone Database TLDs.
+ *
+ * @param tldsFileContent - Content of the TLD list file
+ * @param rootZoneContent - HTML content of Root Zone Database
+ * @returns Comparison showing differences between the two sources
+ */
+export function compare_tlds_vs_rootzone(
+  tldsFileContent: string,
+  rootZoneContent: string,
+): TldsVsRootZoneComparison {
+  // Get TLDs from TLDs file
+  const tldsList = parse_tlds_file(tldsFileContent);
+  const tldsTlds = new Set(tldsList);
+
+  // Get TLDs from Root Zone DB
+  const rootZoneEntries = parse_root_zone_db(rootZoneContent);
+  const rootZoneTlds = new Set(rootZoneEntries.map((e) => e.tld));
+
+  // Find differences
+  const onlyInRootZone = [...rootZoneTlds].filter((tld) => !tldsTlds.has(tld));
+  const onlyInTlds = [...tldsTlds].filter((tld) => !rootZoneTlds.has(tld));
+  const inBoth = tldsTlds.size - onlyInTlds.length;
+
+  // Group Root Zone only TLDs by type
+  const onlyInRootZoneByType = new Map<string, string[]>();
+  for (const tld of onlyInRootZone) {
+    const entry = rootZoneEntries.find((e) => e.tld === tld);
+    if (entry) {
+      const list = onlyInRootZoneByType.get(entry.type) || [];
+      list.push(tld);
+      onlyInRootZoneByType.set(entry.type, list);
+    }
+  }
+
+  return {
+    tldsCount: tldsTlds.size,
+    rootZoneCount: rootZoneTlds.size,
+    inBoth,
+    onlyInRootZone: onlyInRootZone.sort(),
+    onlyInTlds: onlyInTlds.sort(),
+    onlyInRootZoneByType,
   };
 }
