@@ -73,7 +73,7 @@ Examples:
 
   // Handle download command
   if (args.download !== undefined) {
-    const sourceType = args.download as string;
+    const sourceType = args.download as string | boolean;
 
     // If no specific type provided, download all three files
     if (sourceType === true || sourceType === "") {
@@ -109,7 +109,7 @@ Examples:
 
   // Handle analyze command
   if (args.analyze !== undefined) {
-    const sourceType = args.analyze as string;
+    const sourceType = args.analyze as string | boolean;
 
     // If no specific type provided, show comparison of all sources
     if (sourceType === true || sourceType === "") {
