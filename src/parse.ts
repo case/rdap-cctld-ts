@@ -2,35 +2,7 @@
  * Parsing functions for RDAP and TLD data.
  */
 
-import { toUnicode } from "ts-punycode";
 import { DOMParser } from "@b-fuze/deno-dom";
-
-/**
- * Determine if a TLD is a ccTLD (country code TLD).
- *
- * This includes both ASCII ccTLDs (2 characters) and IDN ccTLDs
- * (which are 2 characters when decoded from Punycode).
- *
- * @param tld - The TLD string (lowercase)
- * @returns True if it's a ccTLD, False otherwise
- */
-export function is_cctld(tld: string): boolean {
-  // Decode Punycode if needed
-  if (tld.startsWith("xn--")) {
-    try {
-      // Decode punycode to unicode
-      const decoded = toUnicode(tld);
-      // Count Unicode characters (not bytes)
-      const charCount = Array.from(decoded).length;
-      return charCount === 2;
-    } catch {
-      // If decoding fails, treat as gTLD
-      return false;
-    }
-  } else {
-    return tld.length === 2;
-  }
-}
 
 /**
  * Parse a TLDs file, filtering out comments and empty lines.
@@ -81,6 +53,7 @@ export function parse_bootstrap_tlds(services: unknown[]): string[] {
 export interface TldEntry {
   tld: string;
   type: "generic" | "country-code" | "sponsored" | "infrastructure" | "test" | "generic-restricted";
+  delegated: boolean;
 }
 
 /**
@@ -97,18 +70,28 @@ export function parse_root_zone_db(content: string): TldEntry[] {
   const rows = doc.querySelectorAll("table#tld-table tbody tr");
 
   for (const row of rows) {
-    // Each row has: <span class="domain tld"><a href="...">.<tld></a></span> in first td
-    // and type in second td
+    // Each row has: <span class="domain tld"><a href="...">.<tld></a></span> in first td,
+    // type in second td, and TLD Manager in third td
     const tldLink = row.querySelector('span.domain.tld a[href^="/domains/root/db/"]');
-    const typeCell = row.querySelectorAll("td")[1];
+    const cells = row.querySelectorAll("td");
+    const typeCell = cells[1];
+    const managerCell = cells[2];
 
-    if (tldLink && typeCell) {
+    if (tldLink && typeCell && managerCell) {
       const tldText = tldLink.textContent?.trim();
       const typeText = typeCell.textContent?.trim();
+      const managerText = managerCell.textContent?.trim();
 
-      if (tldText && typeText) {
-        // Remove leading dot and convert to lowercase
-        const tld = tldText.replace(/^\./, "").toLowerCase();
+      if (tldText && typeText && managerText) {
+        // Remove all bidirectional formatting marks (RTL/LTR), then remove all dots, then trim and lowercase
+        const tld = tldText
+          .replace(/[\u200E\u200F\u061C\u202A\u202B\u202C\u202D\u202E]/g, "")
+          .replace(/\./g, "")
+          .trim()
+          .toLowerCase();
+
+        // Check if TLD is delegated (has a manager assigned)
+        const delegated = managerText !== "Not assigned";
 
         // Map type text to our type enum
         let type: TldEntry["type"];
@@ -130,7 +113,7 @@ export function parse_root_zone_db(content: string): TldEntry[] {
           continue;
         }
 
-        entries.push({ tld, type });
+        entries.push({ tld, type, delegated });
       }
     }
   }

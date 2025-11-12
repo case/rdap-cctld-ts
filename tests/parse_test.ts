@@ -1,57 +1,9 @@
 import { assertEquals } from "@std/assert";
 import {
-  is_cctld,
   parse_bootstrap_tlds,
   parse_root_zone_db,
   parse_tlds_file,
 } from "../src/parse.ts";
-
-/**
- * Test: is_cctld function
- */
-Deno.test("is_cctld - identifies ASCII ccTLDs (2 characters)", () => {
-  assertEquals(is_cctld("ac"), true);
-  assertEquals(is_cctld("ad"), true);
-  assertEquals(is_cctld("kg"), true);
-  assertEquals(is_cctld("mg"), true);
-});
-
-Deno.test("is_cctld - identifies gTLDs (not 2 characters)", () => {
-  assertEquals(is_cctld("aaa"), false);
-  assertEquals(is_cctld("aarp"), false);
-  assertEquals(is_cctld("abb"), false);
-  assertEquals(is_cctld("abbott"), false);
-  assertEquals(is_cctld("academy"), false);
-  assertEquals(is_cctld("ads"), false);
-  assertEquals(is_cctld("android"), false);
-});
-
-Deno.test("is_cctld - handles Punycode/IDN ccTLDs", () => {
-  // xn--2scrj9c is the Punycode for a 2-character IDN (भारत - India)
-  // Note: This test may need adjustment based on actual Punycode decoding behavior
-  // For now, we'll test that xn-- TLDs are processed without errors
-  assertEquals(typeof is_cctld("xn--2scrj9c"), "boolean");
-  assertEquals(typeof is_cctld("xn--kprw13d"), "boolean");
-});
-
-Deno.test("is_cctld - handles Punycode/IDN gTLDs", () => {
-  // xn--flw351e is 谷歌 (Google) - 2 chars but NOT a country code, so it's a gTLD
-  // However, our function only checks character count, so it will return true
-  // This is a limitation - we can't distinguish between 2-char ccTLDs and 2-char brand TLDs
-  assertEquals(is_cctld("xn--flw351e"), true); // 谷歌 is 2 chars
-
-  // These are multi-character, so definitely gTLDs
-  assertEquals(is_cctld("xn--q9jyb4c"), false); // みんな
-  assertEquals(is_cctld("xn--qcka1pmc"), false); // グーグル
-});
-
-Deno.test("is_cctld - handles invalid punycode gracefully", () => {
-  // Test malformed punycode strings that start with xn-- but fail to decode
-  // Should treat them as gTLDs (return false) when decoding fails
-  assertEquals(is_cctld("xn--"), false);
-  assertEquals(is_cctld("xn--invalid"), false);
-  assertEquals(is_cctld("xn--!!!"), false);
-});
 
 /**
  * Test: parse_tlds_file function
