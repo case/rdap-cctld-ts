@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project fetches three different [IANA](https://www.iana.org/) data files related to top-level domains each night, and stores copies of each in source control. They are _small data_, so it's ok.
+Each night, this project fetches three different [IANA](https://www.iana.org/) data files (related to top-level domains), and stores copies of them in source control. They are _small data_, so it's ok.
 
 The idea is to be able to see at a glance, things like:
 
@@ -43,13 +43,19 @@ We're able to check for changes prior to downloading the files:
 
 ## Todo
 
-- [ ] Nightly data updates
-- [ ] A unified, generated `tlds.json` file that includes all the data we need, for an eventual web interface
+- [ ] Figure out how to run `server.ts` on val.town
+- [ ] Nightly data updates - GH Actions
 - [ ] An HTTP + web interface
-- [ ] Add the ccTLD RDAP servers from [`overrides.py`](https://github.com/meeb/whoisit/blob/main/whoisit/overrides.py)
+- [ ] A unified, generated `tlds.json` file that includes all the data we need, for an eventual web interface
 - [ ] Lightweight "monitoring" checks for the ccTLD RDAP servers, which don't have the same SLAs as the generics
 
 ## Done
+
+2025-11-12:
+- [x] Refactor to be "an API" with simple CLI & web clients
+- [x] Use Cliffy for terminal tables output
+- [x] Update the CLI analysis output a bit
+- [x] Added the unlisted ccTLD RDAP servers
 
 2025-11-11:
 - [x] Project creation
@@ -57,3 +63,4 @@ We're able to check for changes prior to downloading the files:
 - [x] Download & last-updated checks for all three files
 - [x] Downloaded file validation, parsing, and tests for all three files
 - [x] CLI, for understanding and munging the data, and prototyping future interfaces
+- [x] Reconciled the various TLD metadata counts - cctlds, gtlds, IDNs, sponsored, infra, etc. - across all three files
