@@ -1,14 +1,25 @@
 /**
- * HTTP server to serve the web interface
+ * HTTP server to serve the web interface and API
+ *
+ * Routes:
+ * - / - Web UI (index.html)
+ * - /api/* - JSON API endpoints
+ * - /static/* - Static assets (CSS, JS, images)
  *
  * When running locally: Uses Deno.serve with a port
  * When running on Val Town: Exports default function as HTTP handler
  */
 
 import { serveDir } from "jsr:@std/http/file-server";
+import { handleApiRequest } from "./api/index.ts";
 
 async function handleRequest(req: Request): Promise<Response> {
   const url = new URL(req.url);
+
+  // API routes
+  if (url.pathname.startsWith("/api/")) {
+    return await handleApiRequest(req);
+  }
 
   // Serve index.html for root path
   if (url.pathname === "/") {
