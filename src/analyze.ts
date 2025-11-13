@@ -10,6 +10,17 @@ import {
 } from "./parse.ts";
 
 /**
+ * IDN-specific breakdown
+ */
+export interface IdnCounts {
+  total: number;
+  ccTlds: number;
+  gTlds: number;
+  ascii: number; // punycode format (xn--)
+  unicode: number; // unicode format (non-ASCII)
+}
+
+/**
  * TLD count summary
  */
 export interface TldCounts {
@@ -17,6 +28,7 @@ export interface TldCounts {
   ccTlds: number;
   gTlds: number;
   idns: number;
+  idnBreakdown: IdnCounts;
 }
 
 /**
@@ -47,10 +59,43 @@ export interface RootZoneAnalysis extends TldCounts {
 }
 
 /**
- * Check if a TLD is an IDN (starts with xn--)
+ * Check if a TLD is an IDN and return its format
+ * @returns "ascii" for punycode (xn--), "unicode" for non-ASCII chars, null if not an IDN
+ */
+function get_idn_format(tld: string): "ascii" | "unicode" | null {
+  if (tld.startsWith("xn--")) return "ascii";
+  if (/[^\x00-\x7F]/.test(tld)) return "unicode";
+  return null;
+}
+
+/**
+ * Check if a TLD is an IDN (either format)
  */
 function is_idn(tld: string): boolean {
-  return tld.startsWith("xn--");
+  return get_idn_format(tld) !== null;
+}
+
+/**
+ * Analyze IDN breakdown for a list of TLDs
+ */
+function analyze_idn_breakdown(
+  tlds: string[],
+  ccTldLookup: Set<string>,
+): IdnCounts {
+  const idns = tlds.filter((tld) => is_idn(tld));
+  const asciiIdns = idns.filter((tld) => get_idn_format(tld) === "ascii");
+  const unicodeIdns = idns.filter((tld) => get_idn_format(tld) === "unicode");
+
+  const idnCcTlds = idns.filter((tld) => ccTldLookup.has(tld));
+  const idnGTlds = idns.filter((tld) => !ccTldLookup.has(tld));
+
+  return {
+    total: idns.length,
+    ccTlds: idnCcTlds.length,
+    gTlds: idnGTlds.length,
+    ascii: asciiIdns.length,
+    unicode: unicodeIdns.length,
+  };
 }
 
 /**
@@ -103,12 +148,14 @@ export async function analyze_tlds_file(
   const ccTlds = tlds.filter((tld) => ccTldLookup.has(tld));
   const gTlds = tlds.filter((tld) => !ccTldLookup.has(tld));
   const idns = tlds.filter((tld) => is_idn(tld));
+  const idnBreakdown = analyze_idn_breakdown(tlds, ccTldLookup);
 
   return {
     total: tlds.length,
     ccTlds: ccTlds.length,
     gTlds: gTlds.length,
     idns: idns.length,
+    idnBreakdown,
   };
 }
 
@@ -130,12 +177,14 @@ export async function analyze_rdap_bootstrap(
   const ccTlds = tlds.filter((tld) => ccTldLookup.has(tld));
   const gTlds = tlds.filter((tld) => !ccTldLookup.has(tld));
   const idns = tlds.filter((tld) => is_idn(tld));
+  const idnBreakdown = analyze_idn_breakdown(tlds, ccTldLookup);
 
   return {
     total: tlds.length,
     ccTlds: ccTlds.length,
     gTlds: gTlds.length,
     idns: idns.length,
+    idnBreakdown,
   };
 }
 
@@ -148,12 +197,19 @@ export async function analyze_rdap_bootstrap(
 export function analyze_root_zone_db(content: string): RootZoneAnalysis {
   const entries = parse_root_zone_db(content);
 
+  // Build ccTLD lookup (synchronous version for Root Zone DB only)
+  const ccTldLookup = new Set(
+    entries.filter((e) => e.type === "country-code").map((e) => e.tld)
+  );
+
   // Count by type from the Root Zone DB (all entries)
   const ccTlds = entries.filter((entry) => entry.type === "country-code");
   const gTlds = entries.filter((entry) => entry.type !== "country-code");
 
-  // Count IDNs (punycode encoded)
+  // Count IDNs
   const idns = entries.filter((entry) => is_idn(entry.tld));
+  const allTlds = entries.map((e) => e.tld);
+  const idnBreakdown = analyze_idn_breakdown(allTlds, ccTldLookup);
 
   // Count delegation status
   const delegated = entries.filter((entry) => entry.delegated).length;
@@ -164,6 +220,8 @@ export function analyze_root_zone_db(content: string): RootZoneAnalysis {
   const delegatedCcTlds = delegatedEntries.filter((entry) => entry.type === "country-code");
   const delegatedGTlds = delegatedEntries.filter((entry) => entry.type !== "country-code");
   const delegatedIdns = delegatedEntries.filter((entry) => is_idn(entry.tld));
+  const delegatedTlds = delegatedEntries.map((e) => e.tld);
+  const delegatedIdnBreakdown = analyze_idn_breakdown(delegatedTlds, ccTldLookup);
 
   // Count undelegated TLDs by type
   const undelegatedEntries = entries.filter((entry) => !entry.delegated);
@@ -195,6 +253,7 @@ export function analyze_root_zone_db(content: string): RootZoneAnalysis {
     ccTlds: ccTlds.length,
     gTlds: gTlds.length,
     idns: idns.length,
+    idnBreakdown,
     delegated,
     undelegated,
     undelegatedCcTlds,
@@ -204,6 +263,7 @@ export function analyze_root_zone_db(content: string): RootZoneAnalysis {
       ccTlds: delegatedCcTlds.length,
       gTlds: delegatedGTlds.length,
       idns: delegatedIdns.length,
+      idnBreakdown: delegatedIdnBreakdown,
     },
     byCategory,
     delegatedByCategory,

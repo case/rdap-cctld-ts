@@ -1,4 +1,5 @@
 import { parseArgs } from "@std/cli/parse-args";
+import { Table } from "@cliffy/table";
 import {
   download_iana_rdap_bootstrap,
   download_iana_root_zone_db,
@@ -17,6 +18,20 @@ import { load } from "jsr:@std/dotenv";
 
 // Load environment variables from .env file if it exists
 await load({ export: true });
+
+/**
+ * Create a table with consistent styling (border with header separator only)
+ */
+function createTable() {
+  return new Table()
+    .border(true)
+    .chars({
+      mid: "",
+      leftMid: "",
+      midMid: "",
+      rightMid: "",
+    });
+}
 
 /**
  * Valid data source types
@@ -122,56 +137,28 @@ Examples:
       const analysis = await getFullAnalysis();
       const { tldsFile: tldsAnalysis, rdapBootstrap: rdapAnalysis, rootZoneDb: rootZoneAnalysis, rdapCoverage } = analysis;
 
-      console.log(
-        "\n╔═══════════════════════════════════════════════════════════════╗",
-      );
-      console.log(
-        "║                TLD Data Sources Comparison                    ║",
-      );
-      console.log(
-        "╚═══════════════════════════════════════════════════════════════╝",
-      );
+      console.log("\n╔═══════════════════════════════════════════════════════════════╗");
+      console.log("║                TLD Data Sources Comparison                    ║");
+      console.log("╚═══════════════════════════════════════════════════════════════╝");
       console.log();
-      console.log(
-        "┌─────────────────────┬─────────────┬─────────────┬─────────────┐",
-      );
-      console.log(
-        "│ Metric (delegated)  │ TLDs txt    │ Root DB HTML│ RDAP JSON   │",
-      );
-      console.log(
-        "├─────────────────────┼─────────────┼─────────────┼─────────────┤",
-      );
-      console.log(
-        `│ Total TLDs          │ ${String(tldsAnalysis.total).padStart(11)} │ ${
-          String(rootZoneAnalysis.delegatedCounts.total).padStart(11)
-        } │ ${String(rdapAnalysis.total).padStart(11)} │`,
-      );
-      console.log(
-        `│ ccTLDs              │ ${
-          String(tldsAnalysis.ccTlds).padStart(11)
-        } │ ${String(rootZoneAnalysis.delegatedCounts.ccTlds).padStart(11)} │ ${
-          String(rdapAnalysis.ccTlds).padStart(11)
-        } │`,
-      );
-      console.log(
-        `│ gTLDs               │ ${String(tldsAnalysis.gTlds).padStart(11)} │ ${
-          String(rootZoneAnalysis.delegatedCounts.gTlds).padStart(11)
-        } │ ${String(rdapAnalysis.gTlds).padStart(11)} │`,
-      );
-      console.log(
-        `│ IDNs (punycode)     │ ${String(tldsAnalysis.idns).padStart(11)} │ ${
-          String(rootZoneAnalysis.delegatedCounts.idns).padStart(11)
-        } │ ${String(rdapAnalysis.idns).padStart(11)} │`,
-      );
-      console.log(
-        "└─────────────────────┴─────────────┴─────────────┴─────────────┘",
-      );
+
+      // Calculate RDAP coverage percentages
+      const totalPct = Math.round((rdapAnalysis.total / rootZoneAnalysis.delegatedCounts.total) * 100);
+      const ccTldPct = Math.round((rdapAnalysis.ccTlds / rootZoneAnalysis.delegatedCounts.ccTlds) * 100);
+      const gTldPct = Math.round((rdapAnalysis.gTlds / rootZoneAnalysis.delegatedCounts.gTlds) * 100);
+
+      createTable()
+        .header(["Metric (delegated)", "TLDs txt", "Root DB HTML", "RDAP JSON"])
+        .body([
+          ["─────────────────────", "─────────", "─────────────", "────────────────"],
+          ["Total TLDs", tldsAnalysis.total, rootZoneAnalysis.delegatedCounts.total, `${rdapAnalysis.total} ~${totalPct}%`],
+          ["ccTLDs", tldsAnalysis.ccTlds, rootZoneAnalysis.delegatedCounts.ccTlds, `${rdapAnalysis.ccTlds} ~${ccTldPct}%`],
+          ["gTLDs", tldsAnalysis.gTlds, rootZoneAnalysis.delegatedCounts.gTlds, `${rdapAnalysis.gTlds} ~${gTldPct}%`],
+        ])
+        .render();
 
       console.log();
-      console.log("Root Zone DB - TLDs by Category (delegated only):");
-      console.log("┌─────────────────────┬─────────────┐");
-      console.log("│ Category            │       Count │");
-      console.log("├─────────────────────┼─────────────┤");
+      console.log("Root Zone DB - Categories (delegated) & Delegation Status:");
 
       // Calculate total generic (all non-ccTLD categories)
       const totalGeneric = rootZoneAnalysis.delegatedByCategory["generic"] +
@@ -180,123 +167,97 @@ Examples:
         rootZoneAnalysis.delegatedByCategory["infrastructure"] +
         rootZoneAnalysis.delegatedByCategory["test"];
 
-      // Show Generic (all) first, then subcategories (only if non-zero), then Country-code
-      console.log(
-        `│ Generic (all)       │ ${String(totalGeneric).padStart(11)} │`,
-      );
+      // Build category rows
+      const categoryRows: [string, number][] = [
+        ["Total", rootZoneAnalysis.delegatedCounts.total],
+        ["Generic (all)", totalGeneric],
+      ];
 
-      // Only show subcategories with non-zero counts
       if (rootZoneAnalysis.delegatedByCategory["generic"] > 0) {
-        console.log(
-          `│  - Generic          │ ${
-            String(rootZoneAnalysis.delegatedByCategory["generic"]).padStart(11)
-          } │`,
-        );
+        categoryRows.push(["  - Generic", rootZoneAnalysis.delegatedByCategory["generic"]]);
       }
       if (rootZoneAnalysis.delegatedByCategory["sponsored"] > 0) {
-        console.log(
-          `│  - Sponsored        │ ${
-            String(rootZoneAnalysis.delegatedByCategory["sponsored"]).padStart(
-              11,
-            )
-          } │`,
-        );
+        categoryRows.push(["  - Sponsored", rootZoneAnalysis.delegatedByCategory["sponsored"]]);
       }
       if (rootZoneAnalysis.delegatedByCategory["generic-restricted"] > 0) {
-        console.log(
-          `│  - Generic-restrict │ ${
-            String(rootZoneAnalysis.delegatedByCategory["generic-restricted"])
-              .padStart(11)
-          } │`,
-        );
+        categoryRows.push(["  - Generic-restrict", rootZoneAnalysis.delegatedByCategory["generic-restricted"]]);
       }
       if (rootZoneAnalysis.delegatedByCategory["infrastructure"] > 0) {
-        console.log(
-          `│  - Infrastructure   │ ${
-            String(rootZoneAnalysis.delegatedByCategory["infrastructure"])
-              .padStart(11)
-          } │`,
-        );
+        categoryRows.push(["  - Infrastructure", rootZoneAnalysis.delegatedByCategory["infrastructure"]]);
       }
       if (rootZoneAnalysis.delegatedByCategory["test"] > 0) {
-        console.log(
-          `│  - Test             │ ${
-            String(rootZoneAnalysis.delegatedByCategory["test"]).padStart(11)
-          } │`,
-        );
+        categoryRows.push(["  - Test", rootZoneAnalysis.delegatedByCategory["test"]]);
+      }
+      categoryRows.push(["Country-code", rootZoneAnalysis.delegatedByCategory["country-code"]]);
+
+      // Build delegation status rows
+      const statusRows: [string, number][] = [
+        ["Delegated", rootZoneAnalysis.delegated],
+        ["Undelegated", rootZoneAnalysis.undelegated],
+        ["  - ccTLDs", rootZoneAnalysis.undelegatedCcTlds],
+        ["  - gTLDs", rootZoneAnalysis.undelegatedGTlds],
+      ];
+
+      // Combine rows side by side
+      const maxRows = Math.max(categoryRows.length, statusRows.length);
+      const combinedRows: [string, number | string, string, number | string][] = [];
+      for (let i = 0; i < maxRows; i++) {
+        const catRow = categoryRows[i] || ["", ""];
+        const statRow = statusRows[i] || ["", ""];
+        combinedRows.push([catRow[0], catRow[1], statRow[0], statRow[1]]);
       }
 
-      console.log(
-        `│ Country-code        │ ${
-          String(rootZoneAnalysis.delegatedByCategory["country-code"]).padStart(
-            11,
-          )
-        } │`,
-      );
-      console.log("└─────────────────────┴─────────────┘");
+      // Add separator row at the beginning
+      const rowsWithSeparator: [string, number | string, string, number | string][] = [
+        ["──────────────────────", "──────", "─────────────", "──────"],
+        ...combinedRows,
+      ];
+
+      createTable()
+        .header(["Category", "Count", "Status", "Count"])
+        .body(rowsWithSeparator)
+        .render();
+
       console.log();
-      console.log("Root Zone DB - Delegation Status:");
-      console.log("┌─────────────────────┬─────────────┐");
-      console.log("│ Status              │       Count │");
-      console.log("├─────────────────────┼─────────────┤");
-      console.log(
-        `│ Delegated           │ ${
-          String(rootZoneAnalysis.delegated).padStart(11)
-        } │`,
-      );
-      console.log(
-        `│ Undelegated         │ ${
-          String(rootZoneAnalysis.undelegated).padStart(11)
-        } │`,
-      );
-      console.log(
-        `│  - ccTLDs           │ ${
-          String(rootZoneAnalysis.undelegatedCcTlds).padStart(11)
-        } │`,
-      );
-      console.log(
-        `│  - gTLDs            │ ${
-          String(rootZoneAnalysis.undelegatedGTlds).padStart(11)
-        } │`,
-      );
-      console.log("└─────────────────────┴─────────────┘");
+      console.log("IDN Details - Internationalized Domain Names:");
+
+      createTable()
+        .header(["Metric", "TLDs txt", "Root DB HTML", "RDAP JSON"])
+        .body([
+          ["─────────────────", "─────────", "─────────────", "──────────"],
+          ["Total IDNs", tldsAnalysis.idnBreakdown.total, rootZoneAnalysis.delegatedCounts.idnBreakdown.total, rdapAnalysis.idnBreakdown.total],
+          ["  - ccTLDs", tldsAnalysis.idnBreakdown.ccTlds, rootZoneAnalysis.delegatedCounts.idnBreakdown.ccTlds, rdapAnalysis.idnBreakdown.ccTlds],
+          ["  - gTLDs", tldsAnalysis.idnBreakdown.gTlds, rootZoneAnalysis.delegatedCounts.idnBreakdown.gTlds, rdapAnalysis.idnBreakdown.gTlds],
+          ["Format", "", "", ""],
+          ["  - ASCII (xn--)", tldsAnalysis.idnBreakdown.ascii, rootZoneAnalysis.delegatedCounts.idnBreakdown.ascii, rdapAnalysis.idnBreakdown.ascii],
+          ["  - Unicode", tldsAnalysis.idnBreakdown.unicode, rootZoneAnalysis.delegatedCounts.idnBreakdown.unicode, rdapAnalysis.idnBreakdown.unicode],
+        ])
+        .render();
 
       console.log();
       console.log("RDAP Details - Delegated gTLDs without RDAP servers:");
-      console.log("┌─────────────────────┬─────────────┐");
-      console.log("│ Metric              │       Count │");
-      console.log("├─────────────────────┼─────────────┤");
-      console.log(
-        `│ Total gTLDs         │ ${
-          String(rdapCoverage.totalDelegatedGTlds).padStart(11)
-        } │`,
-      );
-      console.log(
-        `│ With RDAP servers   │ ${
-          String(rdapCoverage.gTldsWithRdap).padStart(11)
-        } │`,
-      );
-      console.log(
-        `│ Without RDAP        │ ${
-          String(rdapCoverage.gTldsWithoutRdap).padStart(11)
-        } │`,
-      );
-      console.log("└─────────────────────┴─────────────┘");
+
+      createTable()
+        .header(["Metric", "Count"])
+        .body([
+          ["──────────────────", "──────"],
+          ["Total gTLDs", rdapCoverage.totalDelegatedGTlds],
+          ["With RDAP servers", rdapCoverage.gTldsWithRdap],
+          ["Without RDAP", rdapCoverage.gTldsWithoutRdap],
+        ])
+        .render();
 
       if (rdapCoverage.missingGTlds.length > 0) {
         console.log();
         console.log("Delegated gTLDs without RDAP servers:");
-        console.log("┌─────────────────────────────────────┬─────────────────────┐");
-        console.log("│ TLD                                 │ Type                │");
-        console.log("├─────────────────────────────────────┼─────────────────────┤");
 
-        for (const { tld, type } of rdapCoverage.missingGTlds) {
-          console.log(
-            `│ ${tld.padEnd(35)} │ ${type.padEnd(19)} │`,
-          );
-        }
-
-        console.log("└─────────────────────────────────────┴─────────────────────┘");
+        createTable()
+          .header(["TLD", "Type"])
+          .body([
+            ["─────", "───────────────"],
+            ...rdapCoverage.missingGTlds.map(({ tld, type }) => [tld, type]),
+          ])
+          .render();
       }
 
       console.log();
