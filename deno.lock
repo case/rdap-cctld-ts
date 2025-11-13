@@ -2,6 +2,7 @@
   "version": "5",
   "specifiers": {
     "jsr:@b-fuze/deno-dom@~0.1.56": "0.1.56",
+    "jsr:@cliffy/table@^1.0.0-rc.7": "1.0.0-rc.8",
     "jsr:@denosaurs/plug@1.1.0": "1.1.0",
     "jsr:@std/assert@^1.0.15": "1.0.15",
     "jsr:@std/cli@*": "1.0.23",
@@ -11,6 +12,7 @@
     "jsr:@std/encoding@^1.0.10": "1.0.10",
     "jsr:@std/fmt@1": "1.0.8",
     "jsr:@std/fmt@^1.0.8": "1.0.8",
+    "jsr:@std/fmt@~1.0.2": "1.0.8",
     "jsr:@std/fs@1": "1.0.19",
     "jsr:@std/fs@^1.0.19": "1.0.19",
     "jsr:@std/html@^1.0.5": "1.0.5",
@@ -32,6 +34,12 @@
       "integrity": "8030e2dc1d8750f1682b53462ab893d9c3470f2287feecbe22f44a88c54ab148",
       "dependencies": [
         "jsr:@denosaurs/plug"
+      ]
+    },
+    "@cliffy/table@1.0.0-rc.8": {
+      "integrity": "8bbcdc2ba5e0061b4b13810a24e6f5c6ab19c09f0cce9eb691ccd76c7c6c9db5",
+      "dependencies": [
+        "jsr:@std/fmt@~1.0.2"
       ]
     },
     "@denosaurs/plug@1.1.0": {
@@ -137,6 +145,7 @@
   "workspace": {
     "dependencies": [
       "jsr:@b-fuze/deno-dom@~0.1.56",
+      "jsr:@cliffy/table@^1.0.0-rc.7",
       "jsr:@std/assert@^1.0.15",
       "jsr:@std/cli@^1.0.23",
       "jsr:@std/dotenv@0.225",
