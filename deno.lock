@@ -6,6 +6,7 @@
     "jsr:@std/assert@^1.0.15": "1.0.15",
     "jsr:@std/cli@*": "1.0.23",
     "jsr:@std/cli@^1.0.23": "1.0.23",
+    "jsr:@std/dotenv@*": "0.225.5",
     "jsr:@std/encoding@1": "1.0.10",
     "jsr:@std/encoding@^1.0.10": "1.0.10",
     "jsr:@std/fmt@1": "1.0.8",
@@ -53,6 +54,9 @@
       "dependencies": [
         "jsr:@std/internal@^1.0.12"
       ]
+    },
+    "@std/dotenv@0.225.5": {
+      "integrity": "9ce6f9d0ec3311f74a32535aa1b8c62ed88b1ab91b7f0815797d77a6f60c922f"
     },
     "@std/encoding@1.0.10": {
       "integrity": "8783c6384a2d13abd5e9e87a7ae0520a30e9f56aeeaa3bdf910a3eaaf5c811a1"
@@ -118,11 +122,24 @@
       "integrity": "sha512-t5Fy/nfn+14LuOc2KNYg75vZqClpAiqscVvMygNnlsHBFpSXdJaYtXMcdNLpl/Qvc3P2cB3s6lOV51nqsFq4ag=="
     }
   },
+  "redirects": {
+    "https://esm.town/v/std/API_URL": "https://esm.town/v/std/API_URL?v=5",
+    "https://esm.town/v/std/ValTownBlobError": "https://esm.town/v/std/ValTownBlobError?v=2",
+    "https://esm.town/v/std/ValTownBlobNotFoundError": "https://esm.town/v/std/ValTownBlobNotFoundError?v=2",
+    "https://esm.town/v/std/blob": "https://esm.town/v/std/blob?v=13"
+  },
+  "remote": {
+    "https://esm.town/v/std/API_URL?v=5": "46109f905a50e32281d3ffbe7b9c8209a778290c5274d83d131fba2d26c4974d",
+    "https://esm.town/v/std/ValTownBlobError?v=2": "5f078bdb92be6111fc3e039a223d2e7c606eec737fb5ba664dc9d9931edfc04e",
+    "https://esm.town/v/std/ValTownBlobNotFoundError?v=2": "0f4f41f3504a33fca793e83a73f2d12de8ca5acbcc397ad8e29510d32527a6ac",
+    "https://esm.town/v/std/blob?v=13": "1ddf1e6a329b18d2109333ad589ebbeef86aa6957e51bf12df48f51180067bfd"
+  },
   "workspace": {
     "dependencies": [
       "jsr:@b-fuze/deno-dom@~0.1.56",
       "jsr:@std/assert@^1.0.15",
       "jsr:@std/cli@^1.0.23",
+      "jsr:@std/dotenv@0.225",
       "npm:ts-punycode@0.1"
     ]
   }
