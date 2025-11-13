@@ -237,28 +237,25 @@ Examples:
       console.log();
       console.log("RDAP Details - Delegated gTLDs without RDAP servers:");
 
-      createTable()
-        .header(["Metric", "Count"])
-        .body([
-          ["──────────────────", "──────"],
-          ["Total gTLDs", rdapCoverage.totalDelegatedGTlds],
-          ["With RDAP servers", rdapCoverage.gTldsWithRdap],
-          ["Without RDAP", rdapCoverage.gTldsWithoutRdap],
-        ])
-        .render();
+      // Build the missing TLDs list for the third column
+      const missingTldsList = rdapCoverage.missingGTlds.map(({ tld }) => tld);
 
-      if (rdapCoverage.missingGTlds.length > 0) {
-        console.log();
-        console.log("Delegated gTLDs without RDAP servers:");
+      const rdapRows: [string, number | string, string][] = [
+        ["──────────────────", "──────", "──────────────"],
+        ["Total gTLDs", rdapCoverage.totalDelegatedGTlds, missingTldsList[0] || ""],
+        ["With RDAP servers", rdapCoverage.gTldsWithRdap, missingTldsList[1] || ""],
+        ["Without RDAP", rdapCoverage.gTldsWithoutRdap, missingTldsList[2] || ""],
+      ];
 
-        createTable()
-          .header(["TLD", "Type"])
-          .body([
-            ["─────", "───────────────"],
-            ...rdapCoverage.missingGTlds.map(({ tld, type }) => [tld, type]),
-          ])
-          .render();
+      // Add extra rows if there are more missing TLDs
+      for (let i = 3; i < missingTldsList.length; i++) {
+        rdapRows.push(["", "", missingTldsList[i]]);
       }
+
+      createTable()
+        .header(["Metric", "Count", "Missing TLDs"])
+        .body(rdapRows)
+        .render();
 
       console.log();
       return;
