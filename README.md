@@ -2,7 +2,7 @@
 
 ## Overview
 
-Each night, this project fetches three different [IANA](https://www.iana.org/) data files (related to top-level domains), and stores copies of them in source control. They are _small data_, so it's ok.
+Each night, this project fetches three different [IANA](https://www.iana.org/) data files (related to top-level domains), and stores copies of them in 1) this git repo, and 2) ValTown blob storage. They are _small data_, so it's ok.
 
 The idea is to be able to see at a glance, things like:
 
@@ -13,15 +13,22 @@ The idea is to be able to see at a glance, things like:
 
 And later on, we'll add some lightweight monitoring to stay ahead of [issues like this](https://github.com/meeb/whoisit/pull/54).
 
+## Val Town
+
+I'm primarily tinkering with this project, to learn how [Val Town](https://val.town) works.
+
+- [cctld-rdap-web](https://www.val.town/x/waddupcase/cctld-rdap-web) - The web frontend
+- [cctld-rdap-data-fetcher](https://www.val.town/x/waddupcase/cctld-rdap-data-fetcher) - The scheduled job that fetches new data each night
+
 ## FAQ
 
-- What's RDAP? See: https://en.wikipedia.org/wiki/Registration_Data_Access_Protocol
-- What are ccTLDs? See: https://en.wikipedia.org/wiki/Country_code_top-level_domain
-- What are gTLDs? See: https://en.wikipedia.org/wiki/Generic_top-level_domain
+- [What is RDAP](https://en.wikipedia.org/wiki/Registration_Data_Access_Protocol)?
+- [What are ccTLDs](https://en.wikipedia.org/wiki/Country_code_top-level_domain)?
+- [What are gTLDs](https://en.wikipedia.org/wiki/Generic_top-level_domain?
 - Which files are we keeping an eye on here?
-  - The RDAP "bootstrap" file: https://data.iana.org/rdap/dns.json
-  - The "all TLDs" txt file: https://data.iana.org/TLD/tlds-alpha-by-domain.txt
-  - The Root Zone DB html file, which alas doesn't appear to be available in a friendlier format: https://www.iana.org/domains/root/db
+  - The IANA [RDAP "bootstrap" file](https://data.iana.org/rdap/dns.json)
+  - The IANAN ["all TLDs" txt file](https://data.iana.org/TLD/tlds-alpha-by-domain.txt)
+  - The [IANA Root Zone DB html file](https://www.iana.org/domains/root/db), which alas doesn't appear to be available in a friendlier format
 
 ## Tests
 
