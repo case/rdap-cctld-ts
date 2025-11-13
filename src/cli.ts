@@ -5,15 +5,14 @@ import {
   download_iana_tlds,
 } from "./main.ts";
 import {
-  analyze_rdap_bootstrap,
-  analyze_rdap_coverage,
-  analyze_root_zone_db,
-  analyze_tlds_file,
-  compare_bootstrap_vs_rootzone,
-  compare_tlds_vs_rootzone,
-} from "./analyze.ts";
-import { get_data_from_file } from "./utilities.ts";
-import { FILENAMES } from "./config.ts";
+  getBootstrapVsRootZoneComparison,
+  getFullAnalysis,
+  getRdapBootstrapAnalysis,
+  getRdapCoverageAnalysis,
+  getRootZoneAnalysis,
+  getTldsAnalysis,
+  getTldsVsRootZoneComparison,
+} from "./api/index.ts";
 import { load } from "jsr:@std/dotenv";
 
 // Load environment variables from .env file if it exists
@@ -46,8 +45,8 @@ async function main() {
     },
   });
 
-  // Show help
-  if (args.help) {
+  // Show help if no command provided or --help flag
+  if (args.help || (args.download === undefined && args.analyze === undefined)) {
     console.log(`
 Usage: deno run src/cli.ts [options]
 
@@ -120,21 +119,8 @@ Examples:
 
     // If no specific type provided, show comparison of all sources
     if (sourceType === true || sourceType === "") {
-      const tldsContent = await get_data_from_file(FILENAMES.TLD_LIST);
-      const rdapContent = await get_data_from_file(FILENAMES.RDAP_BOOTSTRAP);
-      const rootZoneContent = await get_data_from_file(FILENAMES.ROOT_ZONE_DB);
-
-      const rdapData = JSON.parse(rdapContent);
-
-      const tldsAnalysis = await analyze_tlds_file(
-        tldsContent,
-        rootZoneContent,
-      );
-      const rdapAnalysis = await analyze_rdap_bootstrap(
-        rdapData.services,
-        rootZoneContent,
-      );
-      const rootZoneAnalysis = analyze_root_zone_db(rootZoneContent);
+      const analysis = await getFullAnalysis();
+      const { tldsFile: tldsAnalysis, rdapBootstrap: rdapAnalysis, rootZoneDb: rootZoneAnalysis, rdapCoverage } = analysis;
 
       console.log(
         "\n╔═══════════════════════════════════════════════════════════════╗",
@@ -275,12 +261,6 @@ Examples:
       );
       console.log("└─────────────────────┴─────────────┘");
 
-      // RDAP Coverage Analysis
-      const rdapCoverage = await analyze_rdap_coverage(
-        rdapData.services,
-        rootZoneContent,
-      );
-
       console.log();
       console.log("RDAP Details - Delegated gTLDs without RDAP servers:");
       console.log("┌─────────────────────┬─────────────┐");
@@ -334,15 +314,7 @@ Examples:
 
     switch (sourceType as SourceType) {
       case "rdap-bootstrap": {
-        const rdapContent = await Deno.readTextFile(
-          "data/source/iana-rdap-bootstrap.json",
-        );
-        const rootZoneContent = await get_data_from_file(FILENAMES.ROOT_ZONE_DB);
-        const data = JSON.parse(rdapContent);
-        const analysis = await analyze_rdap_bootstrap(
-          data.services,
-          rootZoneContent,
-        );
+        const analysis = await getRdapBootstrapAnalysis();
 
         console.log("\n=== RDAP Bootstrap Analysis ===");
         console.log(`Total TLDs:    ${analysis.total}`);
@@ -352,11 +324,7 @@ Examples:
         break;
       }
       case "tlds-txt": {
-        const tldsContent = await Deno.readTextFile(
-          "data/source/iana-tlds.txt",
-        );
-        const rootZoneContent = await get_data_from_file(FILENAMES.ROOT_ZONE_DB);
-        const analysis = await analyze_tlds_file(tldsContent, rootZoneContent);
+        const analysis = await getTldsAnalysis();
 
         console.log("\n=== TLD List Analysis ===");
         console.log(`Total TLDs:    ${analysis.total}`);
@@ -366,8 +334,7 @@ Examples:
         break;
       }
       case "root-zone-db-html": {
-        const content = await get_data_from_file(FILENAMES.ROOT_ZONE_DB);
-        const analysis = analyze_root_zone_db(content);
+        const analysis = await getRootZoneAnalysis();
 
         console.log("\n=== Root Zone Database Analysis ===");
         console.log(`Total TLDs:    ${analysis.total}`);
@@ -394,16 +361,7 @@ Examples:
         break;
       }
       case "bootstrap-vs-rootdb": {
-        const rdapContent = await Deno.readTextFile(
-          "data/source/iana-rdap-bootstrap.json",
-        );
-        const rootZoneContent = await get_data_from_file(FILENAMES.ROOT_ZONE_DB);
-        const rdapData = JSON.parse(rdapContent);
-
-        const comparison = compare_bootstrap_vs_rootzone(
-          rdapData.services,
-          rootZoneContent,
-        );
+        const comparison = await getBootstrapVsRootZoneComparison();
 
         console.log(
           "\n╔═══════════════════════════════════════════════════════════════╗",
@@ -464,15 +422,7 @@ Examples:
         break;
       }
       case "tlds-vs-rootdb": {
-        const tldsContent = await Deno.readTextFile(
-          "data/source/iana-tlds.txt",
-        );
-        const rootZoneContent = await get_data_from_file(FILENAMES.ROOT_ZONE_DB);
-
-        const comparison = compare_tlds_vs_rootzone(
-          tldsContent,
-          rootZoneContent,
-        );
+        const comparison = await getTldsVsRootZoneComparison();
 
         console.log(
           "\n╔═══════════════════════════════════════════════════════════════╗",
