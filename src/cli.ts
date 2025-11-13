@@ -12,6 +12,12 @@ import {
   compare_bootstrap_vs_rootzone,
   compare_tlds_vs_rootzone,
 } from "./analyze.ts";
+import { get_data_from_file } from "./utilities.ts";
+import { FILENAMES } from "./config.ts";
+import { load } from "jsr:@std/dotenv";
+
+// Load environment variables from .env file if it exists
+await load({ export: true });
 
 /**
  * Valid data source types
@@ -31,7 +37,7 @@ type SourceType = typeof SOURCE_TYPES[number];
  */
 async function main() {
   const args = parseArgs(Deno.args, {
-    boolean: ["help"],
+    boolean: ["help", "val-town-upload-blob"],
     string: ["download", "analyze"],
     alias: {
       h: "help",
@@ -46,8 +52,8 @@ async function main() {
 Usage: deno run src/cli.ts [options]
 
 Options:
-  --download [type], -d [type]  Download IANA data file(s)
-  --analyze [type], -a [type]   Analyze IANA data file(s)
+  --download [type], -d [type]     Download IANA data file(s)
+  --analyze [type], -a [type]      Analyze IANA data file(s)
     Types:
       (none)               Download/analyze all data sources
       rdap-bootstrap       IANA RDAP bootstrap file (JSON)
@@ -55,7 +61,8 @@ Options:
       root-zone-db-html    IANA Root Zone Database (HTML)
       bootstrap-vs-rootdb  Compare RDAP bootstrap vs Root Zone DB
       tlds-vs-rootdb       Compare TLDs txt vs Root Zone DB
-  --help, -h                    Show this help message
+  --val-town-upload-blob           Upload Root Zone DB file to Val Town blob storage
+  --help, -h                       Show this help message
 
 Examples:
   deno task cli --download
@@ -68,7 +75,15 @@ Examples:
   deno task cli -d
   deno task cli -d rdap-bootstrap
   deno task cli -a tlds-txt
+  deno task cli --val-town-upload-blob
     `);
+    return;
+  }
+
+  // Handle Val Town blob upload command
+  if (args["val-town-upload-blob"]) {
+    const { upload_root_zone_db_file_to_blob } = await import("./valtown.ts");
+    await upload_root_zone_db_file_to_blob();
     return;
   }
 
@@ -114,13 +129,9 @@ Examples:
 
     // If no specific type provided, show comparison of all sources
     if (sourceType === true || sourceType === "") {
-      const tldsContent = await Deno.readTextFile("data/source/iana-tlds.txt");
-      const rdapContent = await Deno.readTextFile(
-        "data/source/iana-rdap-bootstrap.json",
-      );
-      const rootZoneContent = await Deno.readTextFile(
-        "data/source/iana-root-zone-db.html",
-      );
+      const tldsContent = await get_data_from_file(FILENAMES.TLD_LIST);
+      const rdapContent = await get_data_from_file(FILENAMES.RDAP_BOOTSTRAP);
+      const rootZoneContent = await get_data_from_file(FILENAMES.ROOT_ZONE_DB);
 
       const rdapData = JSON.parse(rdapContent);
 
@@ -335,9 +346,7 @@ Examples:
         const rdapContent = await Deno.readTextFile(
           "data/source/iana-rdap-bootstrap.json",
         );
-        const rootZoneContent = await Deno.readTextFile(
-          "data/source/iana-root-zone-db.html",
-        );
+        const rootZoneContent = await get_data_from_file(FILENAMES.ROOT_ZONE_DB);
         const data = JSON.parse(rdapContent);
         const analysis = await analyze_rdap_bootstrap(
           data.services,
@@ -355,9 +364,7 @@ Examples:
         const tldsContent = await Deno.readTextFile(
           "data/source/iana-tlds.txt",
         );
-        const rootZoneContent = await Deno.readTextFile(
-          "data/source/iana-root-zone-db.html",
-        );
+        const rootZoneContent = await get_data_from_file(FILENAMES.ROOT_ZONE_DB);
         const analysis = await analyze_tlds_file(tldsContent, rootZoneContent);
 
         console.log("\n=== TLD List Analysis ===");
@@ -368,9 +375,7 @@ Examples:
         break;
       }
       case "root-zone-db-html": {
-        const content = await Deno.readTextFile(
-          "data/source/iana-root-zone-db.html",
-        );
+        const content = await get_data_from_file(FILENAMES.ROOT_ZONE_DB);
         const analysis = analyze_root_zone_db(content);
 
         console.log("\n=== Root Zone Database Analysis ===");
@@ -401,9 +406,7 @@ Examples:
         const rdapContent = await Deno.readTextFile(
           "data/source/iana-rdap-bootstrap.json",
         );
-        const rootZoneContent = await Deno.readTextFile(
-          "data/source/iana-root-zone-db.html",
-        );
+        const rootZoneContent = await get_data_from_file(FILENAMES.ROOT_ZONE_DB);
         const rdapData = JSON.parse(rdapContent);
 
         const comparison = compare_bootstrap_vs_rootzone(
@@ -473,9 +476,7 @@ Examples:
         const tldsContent = await Deno.readTextFile(
           "data/source/iana-tlds.txt",
         );
-        const rootZoneContent = await Deno.readTextFile(
-          "data/source/iana-root-zone-db.html",
-        );
+        const rootZoneContent = await get_data_from_file(FILENAMES.ROOT_ZONE_DB);
 
         const comparison = compare_tlds_vs_rootzone(
           tldsContent,

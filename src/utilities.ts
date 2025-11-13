@@ -1,3 +1,5 @@
+import { BLOB_KEYS, FILENAMES, LOCAL_PATHS } from "./config.ts";
+
 /**
  * Metadata for tracking file downloads
  */
@@ -14,7 +16,7 @@ interface DownloadMetadata {
  * @returns Record of filename to metadata, or empty object if file doesn't exist
  */
 async function load_metadata(): Promise<Record<string, DownloadMetadata>> {
-  const metadataPath = "data/metadata.json";
+  const metadataPath = `${LOCAL_PATHS.DATA_DIR}/${FILENAMES.METADATA}`;
 
   try {
     const content = await Deno.readTextFile(metadataPath);
@@ -32,10 +34,10 @@ async function load_metadata(): Promise<Record<string, DownloadMetadata>> {
 async function save_metadata(
   metadata: Record<string, DownloadMetadata>,
 ): Promise<void> {
-  const metadataPath = "data/metadata.json";
+  const metadataPath = `${LOCAL_PATHS.DATA_DIR}/${FILENAMES.METADATA}`;
 
   try {
-    await Deno.mkdir("data", { recursive: true });
+    await Deno.mkdir(LOCAL_PATHS.DATA_DIR, { recursive: true });
     await Deno.writeTextFile(metadataPath, JSON.stringify(metadata, null, 2));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -104,7 +106,6 @@ export async function download(
         headers["If-None-Match"] = fileMetadata.etag;
       } else if (is_cache_fresh(fileMetadata)) {
         // Fallback: if no ETag/Last-Modified but cache is still fresh per max-age
-        console.log(`Cache still fresh for ${filename} (max-age not expired)`);
         return null;
       }
     }
@@ -121,7 +122,6 @@ export async function download(
 
   // Handle 304 Not Modified - file hasn't changed
   if (response.status === 304) {
-    console.log(`File unchanged: ${filename || url}`);
     return null;
   }
 
@@ -173,11 +173,11 @@ export async function save_to_file(
   data: ArrayBuffer | Uint8Array,
   filename: string,
 ): Promise<void> {
-  const outputPath = `data/source/${filename}`;
+  const outputPath = `${LOCAL_PATHS.SOURCE_DIR}/${filename}`;
 
   try {
     // Ensure the data/source directory exists
-    await Deno.mkdir("data/source", { recursive: true });
+    await Deno.mkdir(LOCAL_PATHS.SOURCE_DIR, { recursive: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`Failed to create data/source directory: ${message}`);
@@ -188,7 +188,6 @@ export async function save_to_file(
     // Write the file to data/source/{filename}
     const uint8Data = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
     await Deno.writeFile(outputPath, uint8Data);
-    console.log(`Saved file to ${outputPath}`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`Failed to write file to ${outputPath}: ${message}`);
