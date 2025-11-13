@@ -37,7 +37,7 @@ type SourceType = typeof SOURCE_TYPES[number];
  */
 async function main() {
   const args = parseArgs(Deno.args, {
-    boolean: ["help", "val-town-upload-blob"],
+    boolean: ["help"],
     string: ["download", "analyze"],
     alias: {
       h: "help",
@@ -61,7 +61,6 @@ Options:
       root-zone-db-html    IANA Root Zone Database (HTML)
       bootstrap-vs-rootdb  Compare RDAP bootstrap vs Root Zone DB
       tlds-vs-rootdb       Compare TLDs txt vs Root Zone DB
-  --val-town-upload-blob           Upload Root Zone DB file to Val Town blob storage
   --help, -h                       Show this help message
 
 Examples:
@@ -75,15 +74,7 @@ Examples:
   deno task cli -d
   deno task cli -d rdap-bootstrap
   deno task cli -a tlds-txt
-  deno task cli --val-town-upload-blob
     `);
-    return;
-  }
-
-  // Handle Val Town blob upload command
-  if (args["val-town-upload-blob"]) {
-    const { upload_root_zone_db_file_to_blob } = await import("./valtown.ts");
-    await upload_root_zone_db_file_to_blob();
     return;
   }
 
