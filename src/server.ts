@@ -1,12 +1,13 @@
 /**
- * Simple HTTP server to serve the web interface
+ * HTTP server to serve the web interface
+ *
+ * When running locally: Uses Deno.serve with a port
+ * When running on Val Town: Exports default function as HTTP handler
  */
 
 import { serveDir } from "jsr:@std/http/file-server";
 
-const PORT = 8000;
-
-Deno.serve({ port: PORT }, async (req) => {
+async function handleRequest(req: Request): Promise<Response> {
   const url = new URL(req.url);
 
   // Serve index.html for root path
@@ -26,6 +27,14 @@ Deno.serve({ port: PORT }, async (req) => {
     fsRoot: "src/web",
     urlRoot: "",
   });
-});
+}
 
-console.log(`Server running at http://localhost:${PORT}/`);
+// Export for Val Town (HTTP val)
+export default handleRequest;
+
+// Run as local server if executed directly
+if (import.meta.main) {
+  const PORT = 8000;
+  Deno.serve({ port: PORT }, handleRequest);
+  console.log(`Server running at http://localhost:${PORT}/`);
+}
