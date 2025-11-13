@@ -5,7 +5,8 @@
       "mcp__context7__get-library-docs",
       "Bash(deno outdated:*)",
       "mcp__val-town__listBlobs",
-      "WebFetch(domain:docs.val.town)"
+      "WebFetch(domain:docs.val.town)",
+      "WebFetch(domain:sdk.val.town)"
     ],
     "deny": [],
     "ask": []
