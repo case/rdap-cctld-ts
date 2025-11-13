@@ -103,3 +103,35 @@ export async function download_and_store_iana_files_to_blob(): Promise<void> {
 export function is_running_on_valtown(): boolean {
   return Deno.env.get("VAL_TOWN_API_KEY") !== undefined;
 }
+
+/**
+ * Val Town Interval (Cron) handler for nightly IANA file downloads.
+ *
+ * Configure this in Val Town UI:
+ * - Set file type to "interval"
+ * - Schedule: Daily at 2 AM UTC (or your preferred time)
+ *
+ * This keeps Val Town's blob storage up-to-date with the latest IANA data.
+ */
+export async function downloadIanaFilesInterval(interval: Interval): Promise<void> {
+  console.log("=".repeat(60));
+  console.log("IANA Files Download Job Started");
+  console.log(`Last run: ${interval.lastRunAt || "Never"}`);
+  console.log(`Current run: ${new Date().toISOString()}`);
+  console.log("=".repeat(60));
+  console.log();
+
+  try {
+    await download_and_store_iana_files_to_blob();
+    console.log();
+    console.log("=".repeat(60));
+    console.log("\x1b[32m✓ Job completed successfully\x1b[0m");
+    console.log("=".repeat(60));
+  } catch (error) {
+    console.error();
+    console.error("=".repeat(60));
+    console.error(`\x1b[31m✗ Job failed: ${error}\x1b[0m`);
+    console.error("=".repeat(60));
+    throw error;
+  }
+}
