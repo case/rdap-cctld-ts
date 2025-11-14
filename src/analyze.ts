@@ -59,6 +59,17 @@ export interface RootZoneAnalysis extends TldCounts {
 }
 
 /**
+ * Enhanced TLDs JSON analysis
+ */
+export interface TldsJsonAnalysis extends TldCounts {
+  totalServices: number;
+  tldsWithRdap: number;
+  tldsWithoutRdap: number;
+  ccTldsWithRdap: number;
+  gTldsWithRdap: number;
+}
+
+/**
  * Check if a TLD is an IDN and return its format
  * @returns "ascii" for punycode (xn--), "unicode" for non-ASCII chars, null if not an IDN
  */
@@ -105,7 +116,9 @@ function analyze_idn_breakdown(
  * @param rootZoneContent - HTML content of Root Zone Database
  * @returns Set of TLDs that are country-code TLDs
  */
-async function build_cctld_lookup(rootZoneContent: string): Promise<Set<string>> {
+async function build_cctld_lookup(
+  rootZoneContent: string,
+): Promise<Set<string>> {
   const entries = parse_root_zone_db(rootZoneContent);
   const ccTlds = new Set<string>();
   const { toASCII } = await import("ts-punycode");
@@ -120,8 +133,12 @@ async function build_cctld_lookup(rootZoneContent: string): Promise<Set<string>>
           const punycode = toASCII(entry.tld);
           ccTlds.add(punycode);
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          console.error(`Failed to convert Unicode ccTLD '${entry.tld}' to punycode: ${message}`);
+          const message = error instanceof Error
+            ? error.message
+            : String(error);
+          console.error(
+            `Failed to convert Unicode ccTLD '${entry.tld}' to punycode: ${message}`,
+          );
         }
       }
     }
@@ -199,7 +216,7 @@ export function analyze_root_zone_db(content: string): RootZoneAnalysis {
 
   // Build ccTLD lookup (synchronous version for Root Zone DB only)
   const ccTldLookup = new Set(
-    entries.filter((e) => e.type === "country-code").map((e) => e.tld)
+    entries.filter((e) => e.type === "country-code").map((e) => e.tld),
   );
 
   // Count by type from the Root Zone DB (all entries)
@@ -217,16 +234,25 @@ export function analyze_root_zone_db(content: string): RootZoneAnalysis {
 
   // Count delegated-only TLDs (for apples-to-apples comparison)
   const delegatedEntries = entries.filter((entry) => entry.delegated);
-  const delegatedCcTlds = delegatedEntries.filter((entry) => entry.type === "country-code");
-  const delegatedGTlds = delegatedEntries.filter((entry) => entry.type !== "country-code");
+  const delegatedCcTlds = delegatedEntries.filter((entry) =>
+    entry.type === "country-code"
+  );
+  const delegatedGTlds = delegatedEntries.filter((entry) =>
+    entry.type !== "country-code"
+  );
   const delegatedIdns = delegatedEntries.filter((entry) => is_idn(entry.tld));
   const delegatedTlds = delegatedEntries.map((e) => e.tld);
-  const delegatedIdnBreakdown = analyze_idn_breakdown(delegatedTlds, ccTldLookup);
+  const delegatedIdnBreakdown = analyze_idn_breakdown(
+    delegatedTlds,
+    ccTldLookup,
+  );
 
   // Count undelegated TLDs by type
   const undelegatedEntries = entries.filter((entry) => !entry.delegated);
-  const undelegatedCcTlds = undelegatedEntries.filter((entry) => entry.type === "country-code").length;
-  const undelegatedGTlds = undelegatedEntries.filter((entry) => entry.type !== "country-code").length;
+  const undelegatedCcTlds =
+    undelegatedEntries.filter((entry) => entry.type === "country-code").length;
+  const undelegatedGTlds =
+    undelegatedEntries.filter((entry) => entry.type !== "country-code").length;
 
   // Count by category (all entries)
   const byCategory = {
@@ -235,17 +261,21 @@ export function analyze_root_zone_db(content: string): RootZoneAnalysis {
     "sponsored": entries.filter((e) => e.type === "sponsored").length,
     "infrastructure": entries.filter((e) => e.type === "infrastructure").length,
     "test": entries.filter((e) => e.type === "test").length,
-    "generic-restricted": entries.filter((e) => e.type === "generic-restricted").length,
+    "generic-restricted":
+      entries.filter((e) => e.type === "generic-restricted").length,
   };
 
   // Count by category (delegated only)
   const delegatedByCategory = {
-    "country-code": delegatedEntries.filter((e) => e.type === "country-code").length,
+    "country-code":
+      delegatedEntries.filter((e) => e.type === "country-code").length,
     "generic": delegatedEntries.filter((e) => e.type === "generic").length,
     "sponsored": delegatedEntries.filter((e) => e.type === "sponsored").length,
-    "infrastructure": delegatedEntries.filter((e) => e.type === "infrastructure").length,
+    "infrastructure":
+      delegatedEntries.filter((e) => e.type === "infrastructure").length,
     "test": delegatedEntries.filter((e) => e.type === "test").length,
-    "generic-restricted": delegatedEntries.filter((e) => e.type === "generic-restricted").length,
+    "generic-restricted":
+      delegatedEntries.filter((e) => e.type === "generic-restricted").length,
   };
 
   return {
@@ -328,7 +358,7 @@ export async function analyze_rdap_coverage(
 
   // Filter for delegated generic TLDs only (non-ccTLD)
   const delegatedGenericTlds = rootZoneEntries.filter(
-    (entry) => entry.delegated && entry.type !== "country-code"
+    (entry) => entry.delegated && entry.type !== "country-code",
   );
 
   // Import punycode converter
@@ -352,17 +382,20 @@ export async function analyze_rdap_coverage(
           }
         } catch (error) {
           // If conversion fails, we'll consider it missing
-          console.error(`Failed to convert '${entry.tld}' to punycode: ${error}`);
+          console.error(
+            `Failed to convert '${entry.tld}' to punycode: ${error}`,
+          );
         }
       }
 
       return true;
-    }
+    },
   );
 
   return {
     totalDelegatedGTlds: delegatedGenericTlds.length,
-    gTldsWithRdap: delegatedGenericTlds.length - missingDelegatedGenerics.length,
+    gTldsWithRdap: delegatedGenericTlds.length -
+      missingDelegatedGenerics.length,
     gTldsWithoutRdap: missingDelegatedGenerics.length,
     missingGTlds: missingDelegatedGenerics.map((entry) => ({
       tld: entry.tld,
@@ -494,6 +527,7 @@ interface TldInfo {
     ascii: string;
     unicode: string;
   } | null;
+  tags: string[];
 }
 
 /**
@@ -551,18 +585,21 @@ export async function build_tlds_json(
   const rootZoneEntries = parse_root_zone_db(rootZoneContent);
 
   // Filter to only delegated TLDs and build lookup maps
-  const delegatedEntries = rootZoneEntries.filter(entry => entry.delegated);
+  const delegatedEntries = rootZoneEntries.filter((entry) => entry.delegated);
   const tldTypeMap = new Map<string, "gtld" | "cctld">();
+  const tldCategoryMap = new Map<string, string>(); // Maps TLD to its category (generic, sponsored, etc.)
 
   for (const entry of delegatedEntries) {
     const type = entry.type === "country-code" ? "cctld" : "gtld";
     tldTypeMap.set(entry.tld, type);
+    tldCategoryMap.set(entry.tld, entry.type);
 
     // Also add punycode version for Unicode TLDs
     if (!entry.tld.startsWith("xn--")) {
       try {
         const ascii = toASCII(entry.tld);
         tldTypeMap.set(ascii, type);
+        tldCategoryMap.set(ascii, entry.type);
       } catch (error) {
         // Conversion failed, skip
       }
@@ -583,7 +620,10 @@ export async function build_tlds_json(
             const cleanTld = tld.replace(/^\./, "").toLowerCase();
             // Only include if it's a delegated TLD
             if (tldTypeMap.has(cleanTld)) {
-              tldToServers.set(cleanTld, servers.filter(s => typeof s === "string"));
+              tldToServers.set(
+                cleanTld,
+                servers.filter((s) => typeof s === "string"),
+              );
             }
           }
         }
@@ -604,7 +644,10 @@ export async function build_tlds_json(
 
   // Group TLDs by their RDAP server(s) signature
   // We use JSON.stringify of sorted servers as the grouping key
-  const serverGroups = new Map<string, { tlds: Set<string>, servers: string[] }>();
+  const serverGroups = new Map<
+    string,
+    { tlds: Set<string>; servers: string[] }
+  >();
 
   for (const [tld, servers] of tldToServers.entries()) {
     const sortedServers = [...servers].sort();
@@ -616,11 +659,11 @@ export async function build_tlds_json(
     serverGroups.get(key)!.tlds.add(tld);
   }
 
-  // Also handle TLDs without RDAP servers (delegated ccTLDs)
+  // Also handle ALL delegated TLDs without RDAP servers (both ccTLDs and gTLDs)
   const tldsWithoutRdap = new Set<string>();
   for (const [tld, type] of tldTypeMap.entries()) {
-    if (type === "cctld" && !tldToServers.has(tld)) {
-      // Only add punycode version for IDNs
+    if (!tldToServers.has(tld)) {
+      // Only add punycode version for IDNs (skip Unicode variants since they're duplicates)
       if (tld.startsWith("xn--") || !/[^\x00-\x7F]/.test(tld)) {
         tldsWithoutRdap.add(tld);
       }
@@ -664,7 +707,16 @@ export async function build_tlds_json(
         }
       }
 
-      tldInfos.push({ tld, type, idn });
+      // Build tags array based on category
+      const tags: string[] = [];
+      const category = tldCategoryMap.get(tld);
+
+      // Add category-based tags (exclude country-code since we already have type field)
+      if (category && category !== "country-code") {
+        tags.push(category);
+      }
+
+      tldInfos.push({ tld, type, idn, tags });
     }
 
     if (tldInfos.length > 0) {
@@ -683,8 +735,73 @@ export async function build_tlds_json(
   });
 
   return {
-    description: "Enhanced RDAP bootstrap with TLD metadata",
-    generated: new Date().toISOString(),
+    description: "All delegated top-level domains, and their RDAP servers",
+    generated: new Date().toISOString().split('.')[0] + 'Z',
     services,
+  };
+}
+
+/**
+ * Analyze the enhanced tlds.json file
+ * @param jsonContent - The tlds.json content as a string
+ * @returns Analysis of the TLDs JSON file
+ */
+export function analyze_tlds_json(jsonContent: string): TldsJsonAnalysis {
+  const data = JSON.parse(jsonContent);
+
+  // Flatten all TLDs from all services
+  const allTlds: Array<{ tld: string; type: "gtld" | "cctld"; idn: { ascii: string; unicode: string } | null }> = [];
+
+  for (const service of data.services) {
+    if (service.tlds && Array.isArray(service.tlds)) {
+      allTlds.push(...service.tlds);
+    }
+  }
+
+  // Count by type
+  const ccTlds = allTlds.filter(t => t.type === "cctld").length;
+  const gTlds = allTlds.filter(t => t.type === "gtld").length;
+
+  // Count IDNs
+  const idns = allTlds.filter(t => t.idn !== null);
+  const idnCcTlds = idns.filter(t => t.type === "cctld").length;
+  const idnGTlds = idns.filter(t => t.type === "gtld").length;
+  const asciiIdns = idns.filter(t => t.idn?.ascii.startsWith("xn--")).length;
+  const unicodeIdns = idns.filter(t => t.idn && !t.idn.ascii.startsWith("xn--")).length;
+
+  // Count TLDs with/without RDAP
+  const tldsWithRdap = data.services
+    .filter((s: { rdapServers: string[] }) => s.rdapServers.length > 0)
+    .reduce((count: number, s: { tlds: unknown[] }) => count + s.tlds.length, 0);
+
+  const tldsWithoutRdap = data.services
+    .filter((s: { rdapServers: string[] }) => s.rdapServers.length === 0)
+    .reduce((count: number, s: { tlds: unknown[] }) => count + s.tlds.length, 0);
+
+  // Count ccTLDs and gTLDs with RDAP
+  const tldsWithRdapList = data.services
+    .filter((s: { rdapServers: string[] }) => s.rdapServers.length > 0)
+    .flatMap((s: { tlds: Array<{ type: string }> }) => s.tlds);
+
+  const ccTldsWithRdap = tldsWithRdapList.filter((t: { type: string }) => t.type === "cctld").length;
+  const gTldsWithRdap = tldsWithRdapList.filter((t: { type: string }) => t.type === "gtld").length;
+
+  return {
+    total: allTlds.length,
+    ccTlds,
+    gTlds,
+    idns: idns.length,
+    idnBreakdown: {
+      total: idns.length,
+      ccTlds: idnCcTlds,
+      gTlds: idnGTlds,
+      ascii: asciiIdns,
+      unicode: unicodeIdns,
+    },
+    totalServices: data.services.length,
+    tldsWithRdap,
+    tldsWithoutRdap,
+    ccTldsWithRdap,
+    gTldsWithRdap,
   };
 }

@@ -21,12 +21,14 @@ import {
   analyze_rdap_coverage,
   analyze_root_zone_db,
   analyze_tlds_file,
+  analyze_tlds_json,
   compare_bootstrap_vs_rootzone,
   compare_tlds_vs_rootzone,
   type BootstrapVsRootZoneComparison,
   type RdapCoverageAnalysis,
   type RootZoneAnalysis,
   type TldCounts,
+  type TldsJsonAnalysis,
   type TldsVsRootZoneComparison,
 } from "../analyze.ts";
 
@@ -130,20 +132,30 @@ export async function getTldsVsRootZoneComparison(): Promise<
 }
 
 /**
- * Get complete comparison of all three data sources
+ * Get analysis of enhanced tlds.json file
+ */
+export async function getTldsJsonAnalysis(): Promise<TldsJsonAnalysis> {
+  const jsonContent = await get_data_from_file("tlds.json", "data");
+  return analyze_tlds_json(jsonContent);
+}
+
+/**
+ * Get complete comparison of all four data sources
  */
 export async function getFullAnalysis(): Promise<{
   tldsFile: TldCounts;
   rdapBootstrap: TldCounts;
   rootZoneDb: RootZoneAnalysis;
   rdapCoverage: RdapCoverageAnalysis;
+  tldsJson: TldsJsonAnalysis;
 }> {
-  const [tldsFile, rdapBootstrap, rootZoneDb, rdapCoverage] = await Promise
+  const [tldsFile, rdapBootstrap, rootZoneDb, rdapCoverage, tldsJson] = await Promise
     .all([
       getTldsAnalysis(),
       getRdapBootstrapAnalysis(),
       getRootZoneAnalysis(),
       getRdapCoverageAnalysis(),
+      getTldsJsonAnalysis(),
     ]);
 
   return {
@@ -151,5 +163,6 @@ export async function getFullAnalysis(): Promise<{
     rdapBootstrap,
     rootZoneDb,
     rdapCoverage,
+    tldsJson,
   };
 }

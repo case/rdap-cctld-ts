@@ -58,6 +58,10 @@
     ],
     [["art"], ["https://rdap.centralnic.com/art/"]],
     [["audio"], ["https://rdap.centralnic.com/audio/"]],
-    [["auto"], ["https://rdap.centralnic.com/auto/"]]
+    [["auto"], ["https://rdap.centralnic.com/auto/"]],
+    [["aero"], ["https://rdap.aero/"]],
+    [["arpa"], ["https://rdap.iana.org/"]],
+    [["biz"], ["https://rdap.centralnic.com/biz/"]],
+    [["aaa"], ["https://rdap.nic.aaa/"]]
   ]
 }

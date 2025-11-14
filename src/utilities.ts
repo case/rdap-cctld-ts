@@ -164,28 +164,30 @@ export async function download(
 }
 
 /**
- * Saves data to a file in the data/source directory
+ * Saves data to a file in the specified directory
  * @param data - The data to save (as ArrayBuffer or Uint8Array)
- * @param filename - The name to save the file as (will be saved to data/source/{filename})
+ * @param filename - The name to save the file as
+ * @param directory - The directory to save to (defaults to data/source)
  * @returns Promise that resolves when save is complete
  */
 export async function save_to_file(
   data: ArrayBuffer | Uint8Array,
   filename: string,
+  directory: string = LOCAL_PATHS.SOURCE_DIR,
 ): Promise<void> {
-  const outputPath = `${LOCAL_PATHS.SOURCE_DIR}/${filename}`;
+  const outputPath = `${directory}/${filename}`;
 
   try {
-    // Ensure the data/source directory exists
-    await Deno.mkdir(LOCAL_PATHS.SOURCE_DIR, { recursive: true });
+    // Ensure the directory exists
+    await Deno.mkdir(directory, { recursive: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`Failed to create data/source directory: ${message}`);
-    throw new Error(`Failed to create data/source directory: ${message}`);
+    console.error(`Failed to create directory ${directory}: ${message}`);
+    throw new Error(`Failed to create directory ${directory}: ${message}`);
   }
 
   try {
-    // Write the file to data/source/{filename}
+    // Write the file to {directory}/{filename}
     const uint8Data = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
     await Deno.writeFile(outputPath, uint8Data);
   } catch (error) {
@@ -201,10 +203,11 @@ export async function save_to_file(
  * When running locally: reads from local filesystem
  *
  * @param filename - The filename to read
+ * @param directory - Optional directory path (defaults to data/source)
  * @returns Promise that resolves with the file content as a string
  * @throws Error if file cannot be read, with environment-specific guidance
  */
-export async function get_data_from_file(filename: string): Promise<string> {
+export async function get_data_from_file(filename: string, directory: string = LOCAL_PATHS.SOURCE_DIR): Promise<string> {
   // Check if running on Val Town
   const isOnValTown = Deno.env.get("VAL_TOWN_API_KEY") !== undefined;
 
@@ -239,7 +242,7 @@ export async function get_data_from_file(filename: string): Promise<string> {
   }
 
   // Default: read from local filesystem
-  const filePath = `${LOCAL_PATHS.SOURCE_DIR}/${filename}`;
+  const filePath = `${directory}/${filename}`;
   try {
     return await Deno.readTextFile(filePath);
   } catch (error) {

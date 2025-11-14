@@ -146,7 +146,7 @@ Examples:
     // If no specific type provided, show comparison of all sources
     if (sourceType === true || sourceType === "") {
       const analysis = await getFullAnalysis();
-      const { tldsFile: tldsAnalysis, rdapBootstrap: rdapAnalysis, rootZoneDb: rootZoneAnalysis, rdapCoverage } = analysis;
+      const { tldsFile: tldsAnalysis, rdapBootstrap: rdapAnalysis, rootZoneDb: rootZoneAnalysis, rdapCoverage, tldsJson: tldsJsonAnalysis } = analysis;
 
       console.log("\n╔═══════════════════════════════════════════════════════════════╗");
       console.log("║                TLD Data Sources Comparison                    ║");
@@ -158,13 +158,18 @@ Examples:
       const ccTldPct = Math.round((rdapAnalysis.ccTlds / rootZoneAnalysis.delegatedCounts.ccTlds) * 100);
       const gTldPct = Math.round((rdapAnalysis.gTlds / rootZoneAnalysis.delegatedCounts.gTlds) * 100);
 
+      // Calculate RDAP coverage for TLDs JSON (built)
+      const tldsJsonRdapPct = Math.round((tldsJsonAnalysis.tldsWithRdap / tldsJsonAnalysis.total) * 100);
+      const tldsJsonCcTldPct = Math.round((tldsJsonAnalysis.ccTldsWithRdap / tldsJsonAnalysis.ccTlds) * 100);
+      const tldsJsonGTldPct = Math.round((tldsJsonAnalysis.gTldsWithRdap / tldsJsonAnalysis.gTlds) * 100);
+
       createTable()
-        .header(["Metric (delegated)", "TLDs txt", "Root DB HTML", "RDAP JSON"])
+        .header(["Metric (delegated)", "TLDs txt", "Root DB HTML", "TLDs JSON (built)", "RDAP JSON", "TLDs JSON RDAP"])
         .body([
-          ["─────────────────────", "─────────", "─────────────", "────────────────"],
-          ["Total TLDs", tldsAnalysis.total, rootZoneAnalysis.delegatedCounts.total, `${rdapAnalysis.total} ~${totalPct}%`],
-          ["ccTLDs", tldsAnalysis.ccTlds, rootZoneAnalysis.delegatedCounts.ccTlds, `${rdapAnalysis.ccTlds} ~${ccTldPct}%`],
-          ["gTLDs", tldsAnalysis.gTlds, rootZoneAnalysis.delegatedCounts.gTlds, `${rdapAnalysis.gTlds} ~${gTldPct}%`],
+          ["─────────────────────", "─────────", "─────────────", "──────────────────", "────────────────", "────────────────"],
+          ["Total TLDs", tldsAnalysis.total, rootZoneAnalysis.delegatedCounts.total, tldsJsonAnalysis.total, `${rdapAnalysis.total} ~${totalPct}%`, `${tldsJsonAnalysis.tldsWithRdap} ~${tldsJsonRdapPct}%`],
+          ["ccTLDs", tldsAnalysis.ccTlds, rootZoneAnalysis.delegatedCounts.ccTlds, tldsJsonAnalysis.ccTlds, `${rdapAnalysis.ccTlds} ~${ccTldPct}%`, `${tldsJsonAnalysis.ccTldsWithRdap} ~${tldsJsonCcTldPct}%`],
+          ["gTLDs", tldsAnalysis.gTlds, rootZoneAnalysis.delegatedCounts.gTlds, tldsJsonAnalysis.gTlds, `${rdapAnalysis.gTlds} ~${gTldPct}%`, `${tldsJsonAnalysis.gTldsWithRdap} ~${tldsJsonGTldPct}%`],
         ])
         .render();
 
@@ -233,15 +238,15 @@ Examples:
       console.log("IDN Details - Internationalized Domain Names:");
 
       createTable()
-        .header(["Metric", "TLDs txt", "Root DB HTML", "RDAP JSON"])
+        .header(["Metric", "TLDs txt", "Root DB HTML", "TLDs JSON (built)", "RDAP JSON"])
         .body([
-          ["─────────────────", "─────────", "─────────────", "──────────"],
-          ["Total IDNs", tldsAnalysis.idnBreakdown.total, rootZoneAnalysis.delegatedCounts.idnBreakdown.total, rdapAnalysis.idnBreakdown.total],
-          ["  - ccTLDs", tldsAnalysis.idnBreakdown.ccTlds, rootZoneAnalysis.delegatedCounts.idnBreakdown.ccTlds, rdapAnalysis.idnBreakdown.ccTlds],
-          ["  - gTLDs", tldsAnalysis.idnBreakdown.gTlds, rootZoneAnalysis.delegatedCounts.idnBreakdown.gTlds, rdapAnalysis.idnBreakdown.gTlds],
-          ["Format", "", "", ""],
-          ["  - ASCII (xn--)", tldsAnalysis.idnBreakdown.ascii, rootZoneAnalysis.delegatedCounts.idnBreakdown.ascii, rdapAnalysis.idnBreakdown.ascii],
-          ["  - Unicode", tldsAnalysis.idnBreakdown.unicode, rootZoneAnalysis.delegatedCounts.idnBreakdown.unicode, rdapAnalysis.idnBreakdown.unicode],
+          ["─────────────────", "─────────", "─────────────", "──────────────────", "──────────"],
+          ["Total IDNs", tldsAnalysis.idnBreakdown.total, rootZoneAnalysis.delegatedCounts.idnBreakdown.total, tldsJsonAnalysis.idnBreakdown.total, rdapAnalysis.idnBreakdown.total],
+          ["  - ccTLDs", tldsAnalysis.idnBreakdown.ccTlds, rootZoneAnalysis.delegatedCounts.idnBreakdown.ccTlds, tldsJsonAnalysis.idnBreakdown.ccTlds, rdapAnalysis.idnBreakdown.ccTlds],
+          ["  - gTLDs", tldsAnalysis.idnBreakdown.gTlds, rootZoneAnalysis.delegatedCounts.idnBreakdown.gTlds, tldsJsonAnalysis.idnBreakdown.gTlds, rdapAnalysis.idnBreakdown.gTlds],
+          ["Format", "", "", "", ""],
+          ["  - ASCII (xn--)", tldsAnalysis.idnBreakdown.ascii, rootZoneAnalysis.delegatedCounts.idnBreakdown.ascii, tldsJsonAnalysis.idnBreakdown.ascii, rdapAnalysis.idnBreakdown.ascii],
+          ["  - Unicode", tldsAnalysis.idnBreakdown.unicode, rootZoneAnalysis.delegatedCounts.idnBreakdown.unicode, tldsJsonAnalysis.idnBreakdown.unicode, rdapAnalysis.idnBreakdown.unicode],
         ])
         .render();
 

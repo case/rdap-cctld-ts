@@ -122,7 +122,7 @@ Deno.test("build_tlds_json - handles IDN TLDs correctly", async () => {
   }
 });
 
-Deno.test("build_tlds_json - includes ccTLDs without RDAP servers", async () => {
+Deno.test("build_tlds_json - includes ALL delegated TLDs without RDAP servers", async () => {
   const rdapContent = await Deno.readTextFile("tests/fixtures/rdap.json");
   const rdapData = JSON.parse(rdapContent);
   const rootZoneContent = await Deno.readTextFile("tests/fixtures/root.html");
@@ -134,14 +134,14 @@ Deno.test("build_tlds_json - includes ccTLDs without RDAP servers", async () => 
     service.rdapServers.length === 0
   );
 
-  // Should have ccTLDs without RDAP servers
+  // Should have TLDs without RDAP servers (both ccTLDs and gTLDs)
   if (noRdapService) {
     assertEquals(noRdapService.tlds.length > 0, true);
+    assertEquals(noRdapService.rdapServers.length, 0);
 
-    // All TLDs in this group should be ccTLDs
-    for (const tld of noRdapService.tlds) {
-      assertEquals(tld.type, "cctld");
-    }
+    // Should include both ccTLDs and gTLDs that are delegated but lack RDAP servers
+    const types = new Set(noRdapService.tlds.map(t => t.type));
+    assertEquals(types.has("cctld") || types.has("gtld"), true);
   }
 });
 
@@ -231,23 +231,72 @@ Deno.test("build_tlds_json - handles empty manual data gracefully", async () => 
   assertEquals(result2.services.length > 0, true);
 });
 
-Deno.test("build_tlds_json - only includes TLDs with RDAP servers from IANA or manual data", async () => {
+Deno.test("build_tlds_json - includes ALL delegated TLDs regardless of RDAP availability", async () => {
   const rdapContent = await Deno.readTextFile("tests/fixtures/rdap.json");
   const rdapData = JSON.parse(rdapContent);
   const rootZoneContent = await Deno.readTextFile("tests/fixtures/root.html");
 
   const result = await build_tlds_json(rdapData.services, rootZoneContent);
 
-  // All gTLDs should have RDAP servers (they're required)
   const allTldObjects = result.services.flatMap(service => service.tlds);
-  const gTlds = allTldObjects.filter(t => t.type === "gtld");
 
-  for (const gtld of gTlds) {
-    // Find the service containing this gTLD
-    const service = result.services.find(s => s.tlds.some(t => t.tld === gtld.tld));
+  // Count TLDs with and without RDAP servers
+  const tldsWithRdap = result.services
+    .filter(s => s.rdapServers.length > 0)
+    .flatMap(s => s.tlds);
 
-    // gTLDs should have RDAP servers
-    assertEquals(service !== undefined, true);
-    assertEquals(service!.rdapServers.length > 0, true);
+  const tldsWithoutRdap = result.services
+    .filter(s => s.rdapServers.length === 0)
+    .flatMap(s => s.tlds);
+
+  // Should have TLDs in both categories
+  assertEquals(tldsWithRdap.length > 0, true);
+  assertEquals(tldsWithoutRdap.length > 0, true);
+
+  // Total should match all TLDs
+  assertEquals(allTldObjects.length, tldsWithRdap.length + tldsWithoutRdap.length);
+});
+
+Deno.test("build_tlds_json - correctly populates tags array based on TLD category", async () => {
+  const rdapContent = await Deno.readTextFile("tests/fixtures/rdap.json");
+  const rdapData = JSON.parse(rdapContent);
+  const rootZoneContent = await Deno.readTextFile("tests/fixtures/root.html");
+
+  const result = await build_tlds_json(rdapData.services, rootZoneContent);
+
+  const allTldObjects = result.services.flatMap(service => service.tlds);
+
+  // Check that all TLDs have a tags array
+  for (const tld of allTldObjects) {
+    assertEquals(Array.isArray(tld.tags), true);
   }
+
+  // Test generic TLD - should have "generic" tag
+  const genericTld = allTldObjects.find(t => t.tld === "aaa");
+  assertEquals(genericTld !== undefined, true);
+  assertEquals(genericTld!.tags.includes("generic"), true);
+
+  // Test sponsored TLD - should have "sponsored" tag
+  const sponsoredTld = allTldObjects.find(t => t.tld === "aero");
+  assertEquals(sponsoredTld !== undefined, true);
+  assertEquals(sponsoredTld!.tags.includes("sponsored"), true);
+
+  // Test infrastructure TLD - should have "infrastructure" tag
+  const infraTld = allTldObjects.find(t => t.tld === "arpa");
+  assertEquals(infraTld !== undefined, true);
+  assertEquals(infraTld!.tags.includes("infrastructure"), true);
+
+  // Test generic-restricted TLD - should have "generic-restricted" tag
+  const restrictedTld = allTldObjects.find(t => t.tld === "biz");
+  assertEquals(restrictedTld !== undefined, true);
+  assertEquals(restrictedTld!.tags.includes("generic-restricted"), true);
+
+  // Test country-code TLD - should NOT have "country-code" tag (redundant with type field)
+  const ccTld = allTldObjects.find(t => t.tld === "ac");
+  assertEquals(ccTld !== undefined, true);
+  assertEquals(ccTld!.type, "cctld");
+  assertEquals(ccTld!.tags.includes("country-code"), false);
+
+  // ccTLDs should have empty tags array (country-code is excluded)
+  assertEquals(ccTld!.tags.length, 0);
 });
