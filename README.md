@@ -50,6 +50,7 @@ We're able to check for changes prior to downloading the files:
 
 ## Todo
 
+- [ ] Add `data/tlds.json` to source control (it's currently in `gitignore`)
 - [ ] Nightly data updates - GH Actions
 - [ ] Figure out how to run `server.ts` on val.town
 - [ ] An HTTP + web interface
