@@ -16,14 +16,6 @@
     "notes": ""
   },
   {
-    "tld": "ai",
-    "rdapServer": "https://rdap.identitydigital.services/rdap/",
-    "backendOperator": "Identity Digital",
-    "dateUpdated": "2025-11-12",
-    "source": "",
-    "notes": ""
-  },
-  {
     "tld": "bz",
     "rdapServer": "https://rdap.identitydigital.services/rdap/",
     "backendOperator": "Identity Digital",
