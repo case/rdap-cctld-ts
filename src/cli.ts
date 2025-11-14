@@ -4,6 +4,7 @@ import {
   download_iana_rdap_bootstrap,
   download_iana_root_zone_db,
   download_iana_tlds,
+  build_and_save_tlds_json,
 } from "./main.ts";
 import {
   getBootstrapVsRootZoneComparison,
@@ -51,17 +52,18 @@ type SourceType = typeof SOURCE_TYPES[number];
  */
 async function main() {
   const args = parseArgs(Deno.args, {
-    boolean: ["help"],
+    boolean: ["help", "build"],
     string: ["download", "analyze"],
     alias: {
       h: "help",
       d: "download",
       a: "analyze",
+      b: "build",
     },
   });
 
   // Show help if no command provided or --help flag
-  if (args.help || (args.download === undefined && args.analyze === undefined)) {
+  if (args.help || (args.download === undefined && args.analyze === undefined && !args.build)) {
     console.log(`
 Usage: deno run src/cli.ts [options]
 
@@ -75,6 +77,7 @@ Options:
       root-zone-db-html    IANA Root Zone Database (HTML)
       bootstrap-vs-rootdb  Compare RDAP bootstrap vs Root Zone DB
       tlds-vs-rootdb       Compare TLDs txt vs Root Zone DB
+  --build, -b                      Build enhanced tlds.json file
   --help, -h                       Show this help message
 
 Examples:
@@ -85,10 +88,18 @@ Examples:
   deno task cli --analyze rdap-bootstrap
   deno task cli --analyze bootstrap-vs-rootdb
   deno task cli --analyze tlds-vs-rootdb
+  deno task cli --build
   deno task cli -d
   deno task cli -d rdap-bootstrap
   deno task cli -a tlds-txt
+  deno task cli -b
     `);
+    return;
+  }
+
+  // Handle build command
+  if (args.build) {
+    await build_and_save_tlds_json();
     return;
   }
 

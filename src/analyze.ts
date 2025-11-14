@@ -483,3 +483,208 @@ export function compare_tlds_vs_rootzone(
     onlyInRootZoneByType,
   };
 }
+
+/**
+ * TLD entry for the enhanced JSON output
+ */
+interface TldInfo {
+  tld: string;
+  type: "gtld" | "cctld";
+  idn: {
+    ascii: string;
+    unicode: string;
+  } | null;
+}
+
+/**
+ * Service entry grouping TLDs by their RDAP server(s)
+ */
+interface ServiceEntry {
+  tlds: TldInfo[];
+  rdapServers: string[];
+}
+
+/**
+ * Enhanced TLD JSON structure
+ */
+interface EnhancedTldJson {
+  description: string;
+  generated: string;
+  services: ServiceEntry[];
+}
+
+/**
+ * Manual ccTLD RDAP entry
+ */
+interface ManualRdapEntry {
+  tld: string;
+  rdapServer: string;
+  backendOperator: string;
+  dateUpdated: string;
+  source: string;
+  notes: string;
+}
+
+/**
+ * Build enhanced TLD JSON file combining IANA RDAP bootstrap with Root Zone DB metadata.
+ *
+ * This function assembles a comprehensive TLD dataset that includes:
+ * - Only delegated TLDs from Root Zone DB
+ * - TLD type (gtld/cctld) classification
+ * - RDAP server information from IANA bootstrap + manual ccTLD data
+ * - IDN information (both ASCII/punycode and Unicode variants)
+ * - Grouped by RDAP server to avoid URL duplication
+ *
+ * @param rdapServices - Services array from IANA RDAP bootstrap JSON
+ * @param rootZoneContent - HTML content of Root Zone Database
+ * @param manualCcTldData - Manual ccTLD RDAP server data (optional)
+ * @returns Enhanced TLD JSON structure
+ */
+export async function build_tlds_json(
+  rdapServices: unknown[],
+  rootZoneContent: string,
+  manualCcTldData?: ManualRdapEntry[],
+): Promise<EnhancedTldJson> {
+  const { toASCII, toUnicode } = await import("ts-punycode");
+
+  // Parse root zone DB to get all TLDs with their types and delegation status
+  const rootZoneEntries = parse_root_zone_db(rootZoneContent);
+
+  // Filter to only delegated TLDs and build lookup maps
+  const delegatedEntries = rootZoneEntries.filter(entry => entry.delegated);
+  const tldTypeMap = new Map<string, "gtld" | "cctld">();
+
+  for (const entry of delegatedEntries) {
+    const type = entry.type === "country-code" ? "cctld" : "gtld";
+    tldTypeMap.set(entry.tld, type);
+
+    // Also add punycode version for Unicode TLDs
+    if (!entry.tld.startsWith("xn--")) {
+      try {
+        const ascii = toASCII(entry.tld);
+        tldTypeMap.set(ascii, type);
+      } catch (error) {
+        // Conversion failed, skip
+      }
+    }
+  }
+
+  // Build map of TLD -> RDAP servers from IANA bootstrap
+  const tldToServers = new Map<string, string[]>();
+
+  for (const service of rdapServices) {
+    if (Array.isArray(service) && service.length >= 2) {
+      const tlds = service[0];
+      const servers = service[1];
+
+      if (Array.isArray(tlds) && Array.isArray(servers)) {
+        for (const tld of tlds) {
+          if (typeof tld === "string") {
+            const cleanTld = tld.replace(/^\./, "").toLowerCase();
+            // Only include if it's a delegated TLD
+            if (tldTypeMap.has(cleanTld)) {
+              tldToServers.set(cleanTld, servers.filter(s => typeof s === "string"));
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Add manual ccTLD RDAP data
+  if (manualCcTldData) {
+    for (const entry of manualCcTldData) {
+      const cleanTld = entry.tld.toLowerCase();
+      // Only add if it's a delegated ccTLD
+      if (tldTypeMap.has(cleanTld) && tldTypeMap.get(cleanTld) === "cctld") {
+        tldToServers.set(cleanTld, [entry.rdapServer]);
+      }
+    }
+  }
+
+  // Group TLDs by their RDAP server(s) signature
+  // We use JSON.stringify of sorted servers as the grouping key
+  const serverGroups = new Map<string, { tlds: Set<string>, servers: string[] }>();
+
+  for (const [tld, servers] of tldToServers.entries()) {
+    const sortedServers = [...servers].sort();
+    const key = JSON.stringify(sortedServers);
+
+    if (!serverGroups.has(key)) {
+      serverGroups.set(key, { tlds: new Set(), servers: sortedServers });
+    }
+    serverGroups.get(key)!.tlds.add(tld);
+  }
+
+  // Also handle TLDs without RDAP servers (delegated ccTLDs)
+  const tldsWithoutRdap = new Set<string>();
+  for (const [tld, type] of tldTypeMap.entries()) {
+    if (type === "cctld" && !tldToServers.has(tld)) {
+      // Only add punycode version for IDNs
+      if (tld.startsWith("xn--") || !/[^\x00-\x7F]/.test(tld)) {
+        tldsWithoutRdap.add(tld);
+      }
+    }
+  }
+
+  if (tldsWithoutRdap.size > 0) {
+    serverGroups.set("[]", { tlds: tldsWithoutRdap, servers: [] });
+  }
+
+  // Build service entries with TLD info
+  const services: ServiceEntry[] = [];
+
+  for (const { tlds, servers } of serverGroups.values()) {
+    const tldInfos: TldInfo[] = [];
+
+    for (const tld of Array.from(tlds).sort()) {
+      const type = tldTypeMap.get(tld);
+      if (!type) continue; // Skip if not in our delegated list
+
+      // Determine IDN info
+      let idn: TldInfo["idn"] = null;
+
+      if (tld.startsWith("xn--")) {
+        // ASCII punycode format - convert to unicode
+        try {
+          const unicode = toUnicode(tld);
+          idn = { ascii: tld, unicode };
+        } catch (error) {
+          // Conversion failed, just use ASCII
+          idn = { ascii: tld, unicode: tld };
+        }
+      } else if (/[^\x00-\x7F]/.test(tld)) {
+        // Unicode format - convert to ASCII
+        try {
+          const ascii = toASCII(tld);
+          idn = { ascii, unicode: tld };
+        } catch (error) {
+          // Conversion failed, just use unicode
+          idn = { ascii: tld, unicode: tld };
+        }
+      }
+
+      tldInfos.push({ tld, type, idn });
+    }
+
+    if (tldInfos.length > 0) {
+      services.push({
+        tlds: tldInfos,
+        rdapServers: servers,
+      });
+    }
+  }
+
+  // Sort services by first TLD alphabetically
+  services.sort((a, b) => {
+    const firstA = a.tlds[0]?.tld || "";
+    const firstB = b.tlds[0]?.tld || "";
+    return firstA.localeCompare(firstB);
+  });
+
+  return {
+    description: "Enhanced RDAP bootstrap with TLD metadata",
+    generated: new Date().toISOString(),
+    services,
+  };
+}
