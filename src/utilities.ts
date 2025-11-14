@@ -1,3 +1,5 @@
+import { FILENAMES, LOCAL_PATHS } from "./config.ts";
+
 /**
  * Metadata for tracking file downloads
  */
@@ -14,7 +16,7 @@ interface DownloadMetadata {
  * @returns Record of filename to metadata, or empty object if file doesn't exist
  */
 async function load_metadata(): Promise<Record<string, DownloadMetadata>> {
-  const metadataPath = "data/metadata.json";
+  const metadataPath = `${LOCAL_PATHS.DATA_DIR}/${FILENAMES.METADATA}`;
 
   try {
     const content = await Deno.readTextFile(metadataPath);
@@ -32,10 +34,10 @@ async function load_metadata(): Promise<Record<string, DownloadMetadata>> {
 async function save_metadata(
   metadata: Record<string, DownloadMetadata>,
 ): Promise<void> {
-  const metadataPath = "data/metadata.json";
+  const metadataPath = `${LOCAL_PATHS.DATA_DIR}/${FILENAMES.METADATA}`;
 
   try {
-    await Deno.mkdir("data", { recursive: true });
+    await Deno.mkdir(LOCAL_PATHS.DATA_DIR, { recursive: true });
     await Deno.writeTextFile(metadataPath, JSON.stringify(metadata, null, 2));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -104,7 +106,6 @@ export async function download(
         headers["If-None-Match"] = fileMetadata.etag;
       } else if (is_cache_fresh(fileMetadata)) {
         // Fallback: if no ETag/Last-Modified but cache is still fresh per max-age
-        console.log(`Cache still fresh for ${filename} (max-age not expired)`);
         return null;
       }
     }
@@ -121,7 +122,6 @@ export async function download(
 
   // Handle 304 Not Modified - file hasn't changed
   if (response.status === 304) {
-    console.log(`File unchanged: ${filename || url}`);
     return null;
   }
 
@@ -164,34 +164,58 @@ export async function download(
 }
 
 /**
- * Saves data to a file in the data/source directory
+ * Saves data to a file in the specified directory
  * @param data - The data to save (as ArrayBuffer or Uint8Array)
- * @param filename - The name to save the file as (will be saved to data/source/{filename})
+ * @param filename - The name to save the file as
+ * @param directory - The directory to save to (defaults to data/source)
  * @returns Promise that resolves when save is complete
  */
 export async function save_to_file(
   data: ArrayBuffer | Uint8Array,
   filename: string,
+  directory: string = LOCAL_PATHS.SOURCE_DIR,
 ): Promise<void> {
-  const outputPath = `data/source/${filename}`;
+  const outputPath = `${directory}/${filename}`;
 
   try {
-    // Ensure the data/source directory exists
-    await Deno.mkdir("data/source", { recursive: true });
+    // Ensure the directory exists
+    await Deno.mkdir(directory, { recursive: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`Failed to create data/source directory: ${message}`);
-    throw new Error(`Failed to create data/source directory: ${message}`);
+    console.error(`Failed to create directory ${directory}: ${message}`);
+    throw new Error(`Failed to create directory ${directory}: ${message}`);
   }
 
   try {
-    // Write the file to data/source/{filename}
+    // Write the file to {directory}/{filename}
     const uint8Data = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
     await Deno.writeFile(outputPath, uint8Data);
-    console.log(`Saved file to ${outputPath}`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`Failed to write file to ${outputPath}: ${message}`);
     throw new Error(`Failed to write file to ${outputPath}: ${message}`);
   }
 }
+
+/**
+ * Generic function to get data from a file.
+ * Reads from local filesystem in all environments.
+ *
+ * @param filename - The filename to read
+ * @param directory - Optional directory path (defaults to data/source)
+ * @returns Promise that resolves with the file content as a string
+ * @throws Error if file cannot be read
+ */
+export async function get_data_from_file(filename: string, directory: string = LOCAL_PATHS.SOURCE_DIR): Promise<string> {
+  const filePath = `${directory}/${filename}`;
+  try {
+    return await Deno.readTextFile(filePath);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Failed to read ${filename} from filesystem (${filePath}): ${message}\n` +
+        `Run 'deno task cli --download' to download IANA files first.`,
+    );
+  }
+}
+

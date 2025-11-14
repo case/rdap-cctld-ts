@@ -2,15 +2,20 @@
   "$schema": "https://raw.githubusercontent.com/denoland/deno/98f62cee78e85bfc47c62ed703777c6bc8794f1c/cli/schemas/config-file.v1.json",
   "imports": {
     "@b-fuze/deno-dom": "jsr:@b-fuze/deno-dom@^0.1.56",
+    "@cliffy/table": "jsr:@cliffy/table@^1.0.0-rc.7",
     "@std/assert": "jsr:@std/assert@^1.0.15",
     "@std/cli": "jsr:@std/cli@^1.0.23",
+    "@std/dotenv": "jsr:@std/dotenv@^0.225.0",
     "ts-punycode": "npm:ts-punycode@^0.1.0"
   },
   "tasks": {
-    "cli": "deno run --allow-net=data.iana.org,www.iana.org --allow-read=./data --allow-write=./data src/cli.ts",
+    "cli": "deno run --no-check --allow-import --allow-env --allow-net --allow-read=./data,./src,./.env --allow-write=./data src/cli.ts",
     "download-bootstrap": "deno run --allow-net=data.iana.org,www.iana.org --allow-read=./data --allow-write=./data src/main.ts",
+    "build": "deno run --no-check --allow-import --allow-env --allow-net --allow-read=./data,./src,./.env --allow-write=./data src/cli.ts --build",
+    "server": "deno run --no-check --allow-import --allow-env --allow-net --allow-read src/httpServer.ts",
+    "deploy": "deno run --allow-read --allow-net --allow-env util/deploy.ts",
     "test": "deno test --allow-read --allow-import",
-    "test:coverage": "deno test --allow-read --allow-import --coverage=cov_profile && deno coverage cov_profile"
+    "test:coverage": "deno test --allow-read --allow-import --coverage=cov_profile"
   },
   "compilerOptions": {
     "noImplicitAny": false,

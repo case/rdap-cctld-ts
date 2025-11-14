@@ -2,18 +2,30 @@
   "version": "5",
   "specifiers": {
     "jsr:@b-fuze/deno-dom@~0.1.56": "0.1.56",
+    "jsr:@cliffy/table@^1.0.0-rc.7": "1.0.0-rc.8",
     "jsr:@denosaurs/plug@1.1.0": "1.1.0",
     "jsr:@std/assert@^1.0.15": "1.0.15",
     "jsr:@std/cli@*": "1.0.23",
     "jsr:@std/cli@^1.0.23": "1.0.23",
+    "jsr:@std/dotenv@*": "0.225.5",
     "jsr:@std/encoding@1": "1.0.10",
+    "jsr:@std/encoding@^1.0.10": "1.0.10",
     "jsr:@std/fmt@1": "1.0.8",
+    "jsr:@std/fmt@^1.0.8": "1.0.8",
+    "jsr:@std/fmt@~1.0.2": "1.0.8",
     "jsr:@std/fs@1": "1.0.19",
+    "jsr:@std/fs@^1.0.19": "1.0.19",
+    "jsr:@std/html@^1.0.5": "1.0.5",
+    "jsr:@std/http@*": "1.0.21",
     "jsr:@std/internal@^1.0.10": "1.0.12",
     "jsr:@std/internal@^1.0.12": "1.0.12",
     "jsr:@std/internal@^1.0.9": "1.0.12",
+    "jsr:@std/media-types@^1.1.0": "1.1.0",
+    "jsr:@std/net@^1.0.6": "1.0.6",
     "jsr:@std/path@1": "1.1.2",
     "jsr:@std/path@^1.1.1": "1.1.2",
+    "jsr:@std/path@^1.1.2": "1.1.2",
+    "jsr:@std/streams@^1.0.13": "1.0.13",
     "npm:@types/node@*": "24.2.0",
     "npm:ts-punycode@0.1": "0.1.0"
   },
@@ -24,12 +36,18 @@
         "jsr:@denosaurs/plug"
       ]
     },
+    "@cliffy/table@1.0.0-rc.8": {
+      "integrity": "8bbcdc2ba5e0061b4b13810a24e6f5c6ab19c09f0cce9eb691ccd76c7c6c9db5",
+      "dependencies": [
+        "jsr:@std/fmt@~1.0.2"
+      ]
+    },
     "@denosaurs/plug@1.1.0": {
       "integrity": "eb2f0b7546c7bca2000d8b0282c54d50d91cf6d75cb26a80df25a6de8c4bc044",
       "dependencies": [
-        "jsr:@std/encoding",
-        "jsr:@std/fmt",
-        "jsr:@std/fs",
+        "jsr:@std/encoding@1",
+        "jsr:@std/fmt@1",
+        "jsr:@std/fs@1",
         "jsr:@std/path@1"
       ]
     },
@@ -45,6 +63,9 @@
         "jsr:@std/internal@^1.0.12"
       ]
     },
+    "@std/dotenv@0.225.5": {
+      "integrity": "9ce6f9d0ec3311f74a32535aa1b8c62ed88b1ab91b7f0815797d77a6f60c922f"
+    },
     "@std/encoding@1.0.10": {
       "integrity": "8783c6384a2d13abd5e9e87a7ae0520a30e9f56aeeaa3bdf910a3eaaf5c811a1"
     },
@@ -58,14 +79,40 @@
         "jsr:@std/path@^1.1.1"
       ]
     },
+    "@std/html@1.0.5": {
+      "integrity": "4e2d693f474cae8c16a920fa5e15a3b72267b94b84667f11a50c6dd1cb18d35e"
+    },
+    "@std/http@1.0.21": {
+      "integrity": "abb5c747651ee6e3ea6139858fd9b1810d2c97f53a5e6722f3b6d27a6d263edc",
+      "dependencies": [
+        "jsr:@std/cli@^1.0.23",
+        "jsr:@std/encoding@^1.0.10",
+        "jsr:@std/fmt@^1.0.8",
+        "jsr:@std/fs@^1.0.19",
+        "jsr:@std/html",
+        "jsr:@std/media-types",
+        "jsr:@std/net",
+        "jsr:@std/path@^1.1.2",
+        "jsr:@std/streams"
+      ]
+    },
     "@std/internal@1.0.12": {
       "integrity": "972a634fd5bc34b242024402972cd5143eac68d8dffaca5eaa4dba30ce17b027"
+    },
+    "@std/media-types@1.1.0": {
+      "integrity": "c9d093f0c05c3512932b330e3cc1fe1d627b301db33a4c2c2185c02471d6eaa4"
+    },
+    "@std/net@1.0.6": {
+      "integrity": "110735f93e95bb9feb95790a8b1d1bf69ec0dc74f3f97a00a76ea5efea25500c"
     },
     "@std/path@1.1.2": {
       "integrity": "c0b13b97dfe06546d5e16bf3966b1cadf92e1cc83e56ba5476ad8b498d9e3038",
       "dependencies": [
         "jsr:@std/internal@^1.0.10"
       ]
+    },
+    "@std/streams@1.0.13": {
+      "integrity": "772d208cd0d3e5dac7c1d9e6cdb25842846d136eea4a41a62e44ed4ab0c8dd9e"
     }
   },
   "npm": {
@@ -83,11 +130,25 @@
       "integrity": "sha512-t5Fy/nfn+14LuOc2KNYg75vZqClpAiqscVvMygNnlsHBFpSXdJaYtXMcdNLpl/Qvc3P2cB3s6lOV51nqsFq4ag=="
     }
   },
+  "redirects": {
+    "https://esm.town/v/std/API_URL": "https://esm.town/v/std/API_URL?v=5",
+    "https://esm.town/v/std/ValTownBlobError": "https://esm.town/v/std/ValTownBlobError?v=2",
+    "https://esm.town/v/std/ValTownBlobNotFoundError": "https://esm.town/v/std/ValTownBlobNotFoundError?v=2",
+    "https://esm.town/v/std/blob": "https://esm.town/v/std/blob?v=13"
+  },
+  "remote": {
+    "https://esm.town/v/std/API_URL?v=5": "46109f905a50e32281d3ffbe7b9c8209a778290c5274d83d131fba2d26c4974d",
+    "https://esm.town/v/std/ValTownBlobError?v=2": "5f078bdb92be6111fc3e039a223d2e7c606eec737fb5ba664dc9d9931edfc04e",
+    "https://esm.town/v/std/ValTownBlobNotFoundError?v=2": "0f4f41f3504a33fca793e83a73f2d12de8ca5acbcc397ad8e29510d32527a6ac",
+    "https://esm.town/v/std/blob?v=13": "1ddf1e6a329b18d2109333ad589ebbeef86aa6957e51bf12df48f51180067bfd"
+  },
   "workspace": {
     "dependencies": [
       "jsr:@b-fuze/deno-dom@~0.1.56",
+      "jsr:@cliffy/table@^1.0.0-rc.7",
       "jsr:@std/assert@^1.0.15",
       "jsr:@std/cli@^1.0.23",
+      "jsr:@std/dotenv@0.225",
       "npm:ts-punycode@0.1"
     ]
   }

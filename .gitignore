@@ -138,3 +138,7 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 /cov_profile
+
+# Misc
+.DS_Store
+data/tlds.json
