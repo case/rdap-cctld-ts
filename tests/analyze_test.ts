@@ -192,3 +192,52 @@ Deno.test("analyze_root_zone_db - counts IDNs correctly", async () => {
   // IDNs in fixture are in Unicode format (non-ASCII characters)
   assertEquals(result.idnBreakdown.unicode >= 2, true);
 });
+
+Deno.test("manual ccTLD file has no duplicates with IANA RDAP bootstrap (production data)", async () => {
+  // Load IANA RDAP bootstrap from production data
+  const rdapContent = await Deno.readTextFile("data/source/iana-rdap-bootstrap.json");
+  const rdapData = JSON.parse(rdapContent);
+
+  // Load manual ccTLD data from production data
+  const manualContent = await Deno.readTextFile("data/source/cctld-rdap-manual.json");
+  const manualData = JSON.parse(manualContent);
+
+  // Extract TLDs from IANA RDAP bootstrap
+  const rdapTlds = new Set<string>();
+  for (const service of rdapData.services) {
+    const [tlds] = service;
+    if (Array.isArray(tlds)) {
+      for (const tld of tlds) {
+        rdapTlds.add(tld.toLowerCase());
+      }
+    }
+  }
+
+  // Extract TLDs from manual ccTLD file
+  const manualTlds: string[] = [];
+  for (const entry of manualData) {
+    // Handle both array format (tlds) and single format (tld)
+    if (entry.tlds && Array.isArray(entry.tlds)) {
+      for (const tld of entry.tlds) {
+        manualTlds.push(tld.toLowerCase());
+      }
+    } else if (entry.tld) {
+      manualTlds.push(entry.tld.toLowerCase());
+    }
+  }
+
+  // Check for duplicates
+  const duplicates: string[] = [];
+  for (const tld of manualTlds) {
+    if (rdapTlds.has(tld)) {
+      duplicates.push(tld);
+    }
+  }
+
+  // Assert no duplicates found
+  assertEquals(
+    duplicates.length,
+    0,
+    `Found ${duplicates.length} TLD(s) in manual file that are already in IANA RDAP bootstrap: ${duplicates.join(", ")}. IANA data is canonical and should not be duplicated.`
+  );
+});
