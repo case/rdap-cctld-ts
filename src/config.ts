@@ -28,13 +28,3 @@ export const FILENAMES = {
   ROOT_ZONE_DB: "iana-root-zone-db.html",
   METADATA: "metadata.json",
 } as const;
-
-/**
- * Val Town blob storage keys
- * When running on Val Town, ALL IANA files are stored in blob storage
- */
-export const BLOB_KEYS = {
-  ROOT_ZONE_DB: "ianaRootZoneDbFile",
-  RDAP_BOOTSTRAP: "ianaRdapBootstrap",
-  TLD_LIST: "ianaTldList",
-} as const;

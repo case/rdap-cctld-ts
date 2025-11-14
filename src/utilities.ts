@@ -1,4 +1,4 @@
-import { BLOB_KEYS, FILENAMES, LOCAL_PATHS } from "./config.ts";
+import { FILENAMES, LOCAL_PATHS } from "./config.ts";
 
 /**
  * Metadata for tracking file downloads
@@ -199,56 +199,21 @@ export async function save_to_file(
 
 /**
  * Generic function to get data from a file.
- * When running on Val Town: reads ALL files from blob storage
- * When running locally: reads from local filesystem
+ * Reads from local filesystem in all environments.
  *
  * @param filename - The filename to read
  * @param directory - Optional directory path (defaults to data/source)
  * @returns Promise that resolves with the file content as a string
- * @throws Error if file cannot be read, with environment-specific guidance
+ * @throws Error if file cannot be read
  */
 export async function get_data_from_file(filename: string, directory: string = LOCAL_PATHS.SOURCE_DIR): Promise<string> {
-  // Check if running on Val Town
-  const isOnValTown = Deno.env.get("VAL_TOWN_API_KEY") !== undefined;
-
-  if (isOnValTown) {
-    // Map filename to blob key
-    const blobKeyMap: Record<string, string> = {
-      [FILENAMES.TLD_LIST]: BLOB_KEYS.TLD_LIST,
-      [FILENAMES.RDAP_BOOTSTRAP]: BLOB_KEYS.RDAP_BOOTSTRAP,
-      [FILENAMES.ROOT_ZONE_DB]: BLOB_KEYS.ROOT_ZONE_DB,
-    };
-
-    const blobKey = blobKeyMap[filename];
-    if (!blobKey) {
-      throw new Error(
-        `No blob key mapping for filename: ${filename}. Valid filenames: ${
-          Object.keys(blobKeyMap).join(", ")
-        }`,
-      );
-    }
-
-    // Import and read from blob storage
-    try {
-      const { read_from_blob } = await import("./valtown.ts");
-      return await read_from_blob(blobKey);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw new Error(
-        `Failed to read ${filename} from Val Town blob storage (key: ${blobKey}): ${message}\n` +
-          `The interval val may not have run yet. Check Val Town logs or run the interval manually.`,
-      );
-    }
-  }
-
-  // Default: read from local filesystem
   const filePath = `${directory}/${filename}`;
   try {
     return await Deno.readTextFile(filePath);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(
-      `Failed to read ${filename} from local filesystem (${filePath}): ${message}\n` +
+      `Failed to read ${filename} from filesystem (${filePath}): ${message}\n` +
         `Run 'deno task cli --download' to download IANA files first.`,
     );
   }
