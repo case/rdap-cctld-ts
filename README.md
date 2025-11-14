@@ -50,13 +50,18 @@ We're able to check for changes prior to downloading the files:
 
 ## Todo
 
-- [ ] Figure out how to run `server.ts` on val.town
 - [ ] Nightly data updates - GH Actions
+- [ ] Figure out how to run `server.ts` on val.town
 - [ ] An HTTP + web interface
-- [ ] A unified, generated `tlds.json` file that includes all the data we need, for an eventual web interface
 - [ ] Lightweight "monitoring" checks for the ccTLD RDAP servers, which don't have the same SLAs as the generics
 
 ## Done
+
+2025-11-14:
+- [x] TLDs txt file - ignore the first line (timestamp) before saving it
+
+2025-11-13:
+- [x] A unified, generated `tlds.json` file that includes all the data we need, for an eventual web interface
 
 2025-11-12:
 - [x] Refactor to be "an API" with simple CLI & web clients
