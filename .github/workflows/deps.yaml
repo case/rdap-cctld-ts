@@ -1,11 +1,14 @@
 name: Update Deno Dependencies
 
 on:
+  workflow_dispatch: # Allow manual triggering
   schedule:
     # Run biweekly (every 2 weeks) on Fridays at 3:00 PM US-Pacific (11:00 PM UTC)
     # Day 1-7 and 15-21 of each month covers roughly every 2 weeks
     - cron: "0 23 1-7,15-21 * 5"
-  workflow_dispatch: # Allow manual triggering
+
+permissions:
+  contents: write
 
 jobs:
   update-deps:
