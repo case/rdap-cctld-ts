@@ -1,12 +1,23 @@
 name: Tests
 
 on:
-  push:
-    branches:
-      - main
-      - master
-  pull_request:
   workflow_dispatch: # Allow manual triggering
+  pull_request:
+    branches: [main]
+    paths:
+      - "deno.json"
+      - ".github/workflows/*"
+      - ".github/actions/*"
+      - "src/**"
+      - "test/**"
+  push:
+    branches: [main]
+    paths:
+      - "deno.json"
+      - ".github/workflows/*"
+      - ".github/actions/*"
+      - "src/**"
+      - "test/**"
 
 jobs:
   test:
@@ -22,7 +33,13 @@ jobs:
           deno-version: v2.x
 
       - name: Run tests
-        run: deno task test
+        run: make test
 
-      - name: Run tests with coverage
-        run: deno task test:coverage
+      - name: Notification if failure
+        if: failure()
+        uses: ./.github/actions/pushover
+        with:
+          pushover_api_token: ${{ secrets.PUSHOVER_API_TOKEN }}
+          pushover_user_key: ${{ secrets.PUSHOVER_USER_KEY }}
+          title: "Tests failed - rdap-cctld-ts"
+          message: "Tests failed in rdap-cctld-ts"
