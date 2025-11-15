@@ -10,7 +10,7 @@
  * When running on Val Town: Exports default function as HTTP handler
  */
 
-import { serveDir } from "jsr:@std/http@^1.0.16/file-server";
+import { serveDir } from "@std/http/file-server";
 import { handleApiRequest } from "./api/index.ts";
 
 async function handleRequest(req: Request): Promise<Response> {

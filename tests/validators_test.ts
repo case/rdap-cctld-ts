@@ -1,4 +1,4 @@
-import { assertEquals, assertThrows } from "jsr:@std/assert@^1.0.15";
+import { assertEquals, assertThrows } from "@std/assert";
 import {
   validate_iana_bootstrap,
   validate_iana_root_zone_db,

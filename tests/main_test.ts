@@ -1,4 +1,4 @@
-import { assertEquals } from "jsr:@std/assert@^1.0.15";
+import { assertEquals } from "@std/assert";
 import { compare_tld_lists_ignore_timestamp } from "../src/main.ts";
 
 /**
