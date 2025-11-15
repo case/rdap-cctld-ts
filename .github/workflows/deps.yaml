@@ -31,14 +31,15 @@ jobs:
         id: update-deps
         run: deno outdated --update --latest --frozen=false
 
-      - name: Run tests
-        id: run-tests
-        run: make test
-
       - name: Check for changes
         id: git-check
         run: |
           git diff --exit-code || echo "changes=true" >> $GITHUB_OUTPUT
+
+      - name: Run tests
+        if: steps.git-check.outputs.changes == 'true'
+        id: run-tests
+        run: make test
 
       - name: Create branch and pull request
         if: steps.git-check.outputs.changes == 'true'
