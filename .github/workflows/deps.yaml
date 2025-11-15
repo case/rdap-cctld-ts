@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   update-deps:
@@ -28,7 +29,7 @@ jobs:
 
       - name: Update Deno dependencies
         id: update-deps
-        run: deno outdated --update --latest
+        run: deno outdated --update --latest --frozen=false
 
       - name: Run tests
         id: run-tests
@@ -39,23 +40,32 @@ jobs:
         run: |
           git diff --exit-code || echo "changes=true" >> $GITHUB_OUTPUT
 
-      - name: Commit and push changes
+      - name: Create branch and pull request
         if: steps.git-check.outputs.changes == 'true'
         run: |
+          # Set git config
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create new branch with timestamp
+          BRANCH_NAME="update-deps-$(date +%Y-%m-%d-%H%M)"
+          git checkout -b "$BRANCH_NAME"
+
+          # Commit changes
           git add .
           git commit -m "Update Deno dependencies"
-          git push
 
-      - name: Notification if success
-        if: steps.git-check.outputs.changes == 'true'
-        uses: ./.github/actions/pushover
-        with:
-          pushover_api_token: ${{ secrets.PUSHOVER_API_TOKEN }}
-          pushover_user_key: ${{ secrets.PUSHOVER_USER_KEY }}
-          title: "Deno deps updated - rdap-cctld-ts"
-          message: "Dependencies successfully updated in rdap-cctld-ts"
+          # Push branch
+          git push -u origin "$BRANCH_NAME"
+
+          # Create pull request
+          gh pr create \
+            --title "Update Deno dependencies" \
+            --body "Automated update of Deno dependencies. All tests passed." \
+            --base main \
+            --head "$BRANCH_NAME"
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Notification if dependency update fails
         if: failure() && steps.update-deps.outcome == 'failure'
