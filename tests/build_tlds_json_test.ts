@@ -300,3 +300,30 @@ Deno.test("build_tlds_json - correctly populates tags array based on TLD categor
   // ccTLDs should have empty tags array (country-code is excluded)
   assertEquals(ccTld!.tags.length, 0);
 });
+
+Deno.test("build_tlds_json - includes TLD manager information", async () => {
+  const rdapContent = await Deno.readTextFile("tests/fixtures/rdap.json");
+  const rdapData = JSON.parse(rdapContent);
+  const rootZoneContent = await Deno.readTextFile("tests/fixtures/root.html");
+
+  const result = await build_tlds_json(rdapData.services, rootZoneContent);
+
+  const allTldObjects = result.services.flatMap(service => service.tlds);
+
+  // All TLD objects should have manager field (optional)
+  for (const tld of allTldObjects) {
+    // Manager should either be a string or undefined
+    if (tld.manager !== undefined) {
+      assertEquals(typeof tld.manager, "string");
+    }
+  }
+
+  // Check specific TLDs have manager info
+  const aaa = allTldObjects.find(t => t.tld === "aaa");
+  assertEquals(aaa !== undefined, true);
+  assertEquals(typeof aaa!.manager, "string");
+
+  const ac = allTldObjects.find(t => t.tld === "ac");
+  assertEquals(ac !== undefined, true);
+  assertEquals(typeof ac!.manager, "string");
+});

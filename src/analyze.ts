@@ -59,6 +59,25 @@ export interface RootZoneAnalysis extends TldCounts {
 }
 
 /**
+ * Comparison of RDAP server groupings vs TLD manager groupings
+ */
+export interface RdapVsManagerComparison {
+  rdapServerGroups: number; // Number of unique RDAP server combinations
+  managerGroups: number; // Number of unique TLD managers
+  rdapGroupsWithMultipleTlds: number; // RDAP server groups managing 2+ TLDs
+  managerGroupsWithMultipleTlds: number; // Managers managing 2+ TLDs
+  largestRdapGroup: {
+    serverCount: number;
+    tldCount: number;
+    servers: string[];
+  };
+  largestManagerGroup: {
+    manager: string;
+    tldCount: number;
+  };
+}
+
+/**
  * Enhanced TLDs JSON analysis
  */
 export interface TldsJsonAnalysis extends TldCounts {
@@ -67,6 +86,7 @@ export interface TldsJsonAnalysis extends TldCounts {
   tldsWithoutRdap: number;
   ccTldsWithRdap: number;
   gTldsWithRdap: number;
+  rdapVsManagerComparison: RdapVsManagerComparison;
 }
 
 /**
@@ -528,6 +548,7 @@ interface TldInfo {
     unicode: string;
   } | null;
   tags: string[];
+  manager?: string;
 }
 
 /**
@@ -588,11 +609,15 @@ export async function build_tlds_json(
   const delegatedEntries = rootZoneEntries.filter((entry) => entry.delegated);
   const tldTypeMap = new Map<string, "gtld" | "cctld">();
   const tldCategoryMap = new Map<string, string>(); // Maps TLD to its category (generic, sponsored, etc.)
+  const tldManagerMap = new Map<string, string>(); // Maps TLD to its manager
 
   for (const entry of delegatedEntries) {
     const type = entry.type === "country-code" ? "cctld" : "gtld";
     tldTypeMap.set(entry.tld, type);
     tldCategoryMap.set(entry.tld, entry.type);
+    if (entry.manager) {
+      tldManagerMap.set(entry.tld, entry.manager);
+    }
 
     // Also add punycode version for Unicode TLDs
     if (!entry.tld.startsWith("xn--")) {
@@ -600,6 +625,9 @@ export async function build_tlds_json(
         const ascii = toASCII(entry.tld);
         tldTypeMap.set(ascii, type);
         tldCategoryMap.set(ascii, entry.type);
+        if (entry.manager) {
+          tldManagerMap.set(ascii, entry.manager);
+        }
       } catch (error) {
         // Conversion failed, skip
       }
@@ -716,7 +744,10 @@ export async function build_tlds_json(
         tags.push(category);
       }
 
-      tldInfos.push({ tld, type, idn, tags });
+      // Get manager for this TLD
+      const manager = tldManagerMap.get(tld);
+
+      tldInfos.push({ tld, type, idn, tags, manager });
     }
 
     if (tldInfos.length > 0) {
@@ -786,6 +817,9 @@ export function analyze_tlds_json(jsonContent: string): TldsJsonAnalysis {
   const ccTldsWithRdap = tldsWithRdapList.filter((t: { type: string }) => t.type === "cctld").length;
   const gTldsWithRdap = tldsWithRdapList.filter((t: { type: string }) => t.type === "gtld").length;
 
+  // Analyze RDAP server groupings vs TLD manager groupings
+  const rdapVsManagerComparison = analyzeRdapVsManager(data.services);
+
   return {
     total: allTlds.length,
     ccTlds,
@@ -803,5 +837,80 @@ export function analyze_tlds_json(jsonContent: string): TldsJsonAnalysis {
     tldsWithoutRdap,
     ccTldsWithRdap,
     gTldsWithRdap,
+    rdapVsManagerComparison,
+  };
+}
+
+/**
+ * Analyze RDAP server groupings vs TLD manager groupings
+ */
+function analyzeRdapVsManager(
+  services: Array<{
+    tlds: Array<{ tld: string; manager?: string }>;
+    rdapServers: string[];
+  }>,
+): RdapVsManagerComparison {
+  // Count RDAP server groups (excluding empty RDAP groups)
+  const rdapServerGroups = services.filter((s) => s.rdapServers.length > 0);
+  const rdapGroupsWithMultipleTlds = rdapServerGroups.filter(
+    (s) => s.tlds.length > 1,
+  ).length;
+
+  // Find largest RDAP group
+  let largestRdapGroup = {
+    serverCount: 0,
+    tldCount: 0,
+    servers: [] as string[],
+  };
+
+  for (const service of rdapServerGroups) {
+    if (service.tlds.length > largestRdapGroup.tldCount) {
+      largestRdapGroup = {
+        serverCount: service.rdapServers.length,
+        tldCount: service.tlds.length,
+        servers: service.rdapServers,
+      };
+    }
+  }
+
+  // Group TLDs by manager
+  const managerToTlds = new Map<string, string[]>();
+
+  for (const service of services) {
+    for (const tld of service.tlds) {
+      if (tld.manager) {
+        const existing = managerToTlds.get(tld.manager) || [];
+        existing.push(tld.tld);
+        managerToTlds.set(tld.manager, existing);
+      }
+    }
+  }
+
+  const managerGroups = managerToTlds.size;
+  const managerGroupsWithMultipleTlds = Array.from(managerToTlds.values())
+    .filter((tlds) => tlds.length > 1).length;
+
+  // Find largest manager group
+  let largestManagerGroup = {
+    manager: "",
+    tldCount: 0,
+  };
+
+  for (const [manager, tlds] of managerToTlds.entries()) {
+    if (tlds.length > largestManagerGroup.tldCount) {
+      largestManagerGroup = {
+        manager,
+        tldCount: tlds.length,
+      };
+    }
+  }
+
+  return {
+    rdapServerGroups: rdapServerGroups.length,
+    managerGroups,
+    rdapGroupsWithMultipleTlds,
+    managerGroupsWithMultipleTlds,
+    largestRdapGroup,
+    largestManagerGroup,
   };
 }

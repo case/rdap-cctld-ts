@@ -143,6 +143,12 @@ Deno.test("parse_root_zone_db - parses Root Zone DB HTML correctly", async () =>
     assertEquals(typeof entry.tld, "string");
     assertEquals(typeof entry.type, "string");
     assertEquals(typeof entry.delegated, "boolean");
+    // Manager is optional and only present for delegated TLDs
+    if (entry.delegated) {
+      assertEquals(typeof entry.manager, "string");
+    } else {
+      assertEquals(entry.manager, undefined);
+    }
   }
 });
 

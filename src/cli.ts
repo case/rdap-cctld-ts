@@ -8,7 +8,7 @@ import {
 } from "./main.ts";
 import {
   getBootstrapVsRootZoneComparison,
-  getFullAnalysis,
+  getSourceFilesAnalysis,
   getRdapBootstrapAnalysis,
   getRdapCoverageAnalysis,
   getRootZoneAnalysis,
@@ -145,7 +145,7 @@ Examples:
 
     // If no specific type provided, show comparison of all sources
     if (sourceType === true || sourceType === "") {
-      const analysis = await getFullAnalysis();
+      const analysis = await getSourceFilesAnalysis();
       const { tldsFile: tldsAnalysis, rdapBootstrap: rdapAnalysis, rootZoneDb: rootZoneAnalysis, rdapCoverage, tldsJson: tldsJsonAnalysis } = analysis;
 
       console.log("\n╔═══════════════════════════════════════════════════════════════╗");

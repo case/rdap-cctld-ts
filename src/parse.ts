@@ -54,6 +54,7 @@ export interface TldEntry {
   tld: string;
   type: "generic" | "country-code" | "sponsored" | "infrastructure" | "test" | "generic-restricted";
   delegated: boolean;
+  manager?: string;
 }
 
 /**
@@ -113,7 +114,12 @@ export function parse_root_zone_db(content: string): TldEntry[] {
           continue;
         }
 
-        entries.push({ tld, type, delegated });
+        entries.push({
+          tld,
+          type,
+          delegated,
+          manager: delegated ? managerText : undefined,
+        });
       }
     }
   }
