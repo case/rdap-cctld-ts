@@ -274,6 +274,28 @@ Examples:
         .render();
 
       console.log();
+      console.log("RDAP Server Groups vs TLD Manager Groups:");
+
+      const comp = tldsJsonAnalysis.rdapVsManagerComparison;
+
+      createTable()
+        .header(["Metric", "RDAP Server Groups", "TLD Manager Groups"])
+        .body([
+          ["─────────────────────────", "────────────────────", "──────────────────"],
+          ["Total unique groups", comp.rdapServerGroups, comp.managerGroups],
+          ["Groups with 2+ TLDs", comp.rdapGroupsWithMultipleTlds, comp.managerGroupsWithMultipleTlds],
+          ["Largest group size (TLDs)", comp.largestRdapGroup.tldCount, comp.largestManagerGroup.tldCount],
+        ])
+        .render();
+
+      console.log();
+      console.log(`Largest RDAP group: ${comp.largestRdapGroup.tldCount} TLDs served by ${comp.largestRdapGroup.serverCount} server(s)`);
+      console.log(`  Servers: ${comp.largestRdapGroup.servers.join(", ")}`);
+      console.log();
+      console.log(`Largest Manager group: ${comp.largestManagerGroup.tldCount} TLDs managed by:`);
+      console.log(`  "${comp.largestManagerGroup.manager}"`);
+
+      console.log();
       return;
     }
 

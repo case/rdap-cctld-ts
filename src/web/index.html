@@ -3,9 +3,214 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RDAP ccTLD</title>
+  <title>IANA Top-Level Domain Explorer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-color: #ffffff;
+      --text-color: #333333;
+      --text-secondary: #666666;
+      --border-color: #dddddd;
+      --card-bg: #f9f9f9;
+      --heading-border: #333333;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #1a1a1a;
+        --text-color: #e0e0e0;
+        --text-secondary: #a0a0a0;
+        --border-color: #404040;
+        --card-bg: #2a2a2a;
+        --heading-border: #e0e0e0;
+      }
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      line-height: 1.6;
+      padding: 2rem;
+      max-width: 900px;
+      margin: 0 auto;
+      color: var(--text-color);
+      background-color: var(--bg-color);
+    }
+    h1 { margin-bottom: 0.5rem; font-size: 2rem; }
+    h2 {
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      font-size: 1.25rem;
+      border-bottom: 2px solid var(--heading-border);
+      padding-bottom: 0.5rem;
+    }
+    .subtitle { color: var(--text-secondary); margin-bottom: 0.25rem; }
+    .subtitle:last-of-type { margin-bottom: 2rem; }
+    a { color: var(--text-secondary); text-decoration: underline; }
+    a:visited { color: var(--text-secondary); }
+    .loading { text-align: center; padding: 3rem; color: var(--text-secondary); }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .stat-card {
+      border: 1px solid var(--border-color);
+      padding: 1.5rem;
+      border-radius: 6px;
+      background: var(--card-bg);
+    }
+    .stat-card h3 {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .stat-card .value { font-size: 2.5rem; font-weight: bold; color: var(--text-color); }
+    .stat-card .note { font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.5rem; }
+    code { font-family: 'Courier New', Courier, monospace; }
+  </style>
+  <script type="module">
+    import Alpine from 'https://esm.sh/alpinejs@3.14.1'
+
+    Alpine.data('app', () => ({
+      loading: true,
+      data: null,
+      error: null,
+
+      async init() {
+        await this.loadData()
+      },
+
+      async loadData() {
+        try {
+          const response = await fetch('/api/analysis/tlds')
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+          }
+          this.data = await response.json()
+        } catch (err) {
+          this.error = err.message
+          console.error('Failed to load data:', err)
+        } finally {
+          this.loading = false
+        }
+      },
+
+      rdapCoveragePercent() {
+        if (!this.data) return '0%'
+        const percent = Math.round(this.data.tldsWithRdap / this.data.total * 100)
+        return `${percent}%`
+      },
+
+      ccTldRdapPercent() {
+        if (!this.data || !this.data.ccTlds) return '0%'
+        const percent = Math.round(this.data.ccTldsWithRdap / this.data.ccTlds * 100)
+        return `${percent}%`
+      },
+
+      formatNumber(num) {
+        return num.toLocaleString('en-US')
+      },
+
+      idnPercent() {
+        if (!this.data || !this.data.total) return '0%'
+        const percent = Math.round(this.data.idns / this.data.total * 100)
+        return `${percent}%`
+      },
+
+      ccTldIdnPercent() {
+        if (!this.data || !this.data.ccTlds) return '0%'
+        const percent = Math.round(this.data.idnBreakdown.ccTlds / this.data.ccTlds * 100)
+        return `${percent}%`
+      },
+
+      gTldIdnPercent() {
+        if (!this.data || !this.data.gTlds) return '0%'
+        const percent = Math.round(this.data.idnBreakdown.gTlds / this.data.gTlds * 100)
+        return `${percent}%`
+      },
+
+      gTldPercentOfTotal() {
+        if (!this.data || !this.data.total) return '0%'
+        const percent = Math.round(this.data.gTlds / this.data.total * 100)
+        return `${percent}%`
+      },
+
+      ccTldPercentOfTotal() {
+        if (!this.data || !this.data.total) return '0%'
+        const percent = Math.round(this.data.ccTlds / this.data.total * 100)
+        return `${percent}%`
+      }
+    }))
+
+    Alpine.start()
+  </script>
 </head>
-<body>
-  <h1>hello, world</h1>
+<body x-data="app">
+  <h1>IANA Top-Level Domain Explorer</h1>
+  <p class="subtitle">Exploring delegated TLDs and their RDAP servers - by <a href="https://vedana.net/" target="_blank">Eric Case</a></p>
+  <p class="subtitle">Last updated: <span x-text="new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })"></span></p>
+  <p class="subtitle">Data sources: IANA <a href="https://www.iana.org/domains/root/db" target="_blank">Root Zone db</a> and <a href="https://data.iana.org/rdap/dns.json" target="_blank">RDAP bootstrap</a></p>
+
+  <template x-if="loading">
+    <div class="loading">Loading data...</div>
+  </template>
+
+  <template x-if="error">
+    <div style="color: red; padding: 1rem; border: 1px solid red; border-radius: 4px;">
+      <strong>Error:</strong> <span x-text="error"></span>
+    </div>
+  </template>
+
+  <template x-if="!loading && !error && data">
+    <div>
+      <h2>Overview</h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <h3>Total Delegated TLDs</h3>
+          <div class="value" x-text="formatNumber(data.total)"></div>
+          <div class="note" x-text="idnPercent() + ' (' + formatNumber(data.idns) + ') are IDN'"></div>
+        </div>
+
+        <div class="stat-card">
+          <h3>Generic TLDs</h3>
+          <div class="value" x-text="formatNumber(data.gTlds)"></div>
+          <div class="note" x-text="gTldPercentOfTotal() + ' of total TLDs'"></div>
+          <div class="note" x-text="gTldIdnPercent() + ' (' + formatNumber(data.idnBreakdown.gTlds) + ') are IDN'"></div>
+        </div>
+
+        <div class="stat-card">
+          <h3>Country-Code TLDs</h3>
+          <div class="value" x-text="formatNumber(data.ccTlds)"></div>
+          <div class="note" x-text="ccTldPercentOfTotal() + ' of total TLDs'"></div>
+          <div class="note" x-text="ccTldIdnPercent() + ' (' + formatNumber(data.idnBreakdown.ccTlds) + ') are IDN'"></div>
+        </div>
+      </div>
+
+      <h2>RDAP Coverage</h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <h3>TLDs with RDAP</h3>
+          <div class="value" x-text="formatNumber(data.tldsWithRdap)"></div>
+          <div class="note" x-text="rdapCoveragePercent() + ' of all TLDs'"></div>
+        </div>
+
+        <div class="stat-card">
+          <h3>Generic TLDs</h3>
+          <div class="value" x-text="formatNumber(data.gTldsWithRdap)"></div>
+          <div class="note">All except: <code>arpa</code>, <code>edu</code>, <code>gov</code>, <code>mil</code></div>
+        </div>
+
+        <div class="stat-card">
+          <h3>Country-Code TLDs</h3>
+          <div class="value" x-text="formatNumber(data.ccTldsWithRdap)"></div>
+          <div class="note" x-text="ccTldRdapPercent() + ' of ccTLDs'"></div>
+        </div>
+      </div>
+    </div>
+  </template>
 </body>
 </html>

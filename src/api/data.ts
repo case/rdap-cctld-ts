@@ -140,9 +140,9 @@ export async function getTldsJsonAnalysis(): Promise<TldsJsonAnalysis> {
 }
 
 /**
- * Get complete comparison of all four data sources
+ * Get analysis of all individual IANA source files
  */
-export async function getFullAnalysis(): Promise<{
+export async function getSourceFilesAnalysis(): Promise<{
   tldsFile: TldCounts;
   rdapBootstrap: TldCounts;
   rootZoneDb: RootZoneAnalysis;

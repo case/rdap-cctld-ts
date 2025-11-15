@@ -1,11 +1,12 @@
 /**
  * API Routes - HTTP handlers for JSON endpoints
  *
- * Currently exposes a single endpoint for full analysis.
- * Additional endpoints can be added as needed.
+ * Endpoints:
+ * - /api/analysis/files - Analysis of individual IANA source files
+ * - /api/analysis/tlds - Analysis of generated tlds.json file
  */
 
-import { getFullAnalysis } from "./data.ts";
+import { getSourceFilesAnalysis, getTldsJsonAnalysis } from "./data.ts";
 
 /**
  * Handle API requests and return JSON responses
@@ -27,10 +28,18 @@ export async function handleApiRequest(req: Request): Promise<Response> {
   }
 
   try {
-    // Single API endpoint for full analysis
-    if (path === "/api/analysis") {
+    // Analysis of individual IANA source files
+    if (path === "/api/analysis/files") {
       return new Response(
-        JSON.stringify(await getFullAnalysis()),
+        JSON.stringify(await getSourceFilesAnalysis()),
+        { headers },
+      );
+    }
+
+    // Analysis of generated tlds.json file
+    if (path === "/api/analysis/tlds") {
+      return new Response(
+        JSON.stringify(await getTldsJsonAnalysis()),
         { headers },
       );
     }
