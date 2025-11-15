@@ -51,7 +51,6 @@ We're able to check for changes prior to downloading the files:
 ## Todo
 
 - [ ] Add `data/tlds.json` to source control (it's currently in `gitignore`)
-- [ ] Nightly data updates - GH Actions
 - [ ] Figure out how to run `server.ts` on val.town
 - [ ] An HTTP + web interface
 - [ ] Lightweight "monitoring" checks for the ccTLD RDAP servers, which don't have the same SLAs as the generics
@@ -60,6 +59,10 @@ We're able to check for changes prior to downloading the files:
 
 2025-11-14:
 - [x] TLDs txt file - ignore the first line (timestamp) before saving it
+- [x] Nightly data updates - GH Actions
+- [x] Tests running in GH Actions
+- [x] Deno dep updates in GH Actions
+- [x] Only update `data/metadata.json` when there are downloaded file updates
 
 2025-11-13:
 - [x] A unified, generated `tlds.json` file that includes all the data we need, for an eventual web interface
