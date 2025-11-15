@@ -1,9 +1,15 @@
 .PHONY: help
 help:
 	@echo "Available commands:"
+	@echo "  make deps              - Install/update dependencies and update lockfile"
 	@echo "  make test              - Run all tests"
 	@echo "  make build-tlds-json   - Build the enhanced tlds.json file from IANA data sources"
 	@echo "  make deploy-valtown    - Deploy to Val Town (vt push) and upload Root Zone DB file to blob storage"
+
+.PHONY: deps
+deps:
+	@echo "Installing dependencies…"
+	deno install --allow-import --frozen=false
 
 .PHONY: test
 test:
