@@ -2,7 +2,7 @@
 
 ## Overview
 
-Each night, this project fetches three different [IANA](https://www.iana.org/) data files (related to top-level domains), and stores copies of them in 1) this git repo, and 2) ValTown blob storage. They are _small data_, so it's ok.
+Each night, this project fetches three different [IANA](https://www.iana.org/) data files (related to top-level domains), and stores copies of them in this git repo. They are _small data_, so it's ok.
 
 The idea is to be able to see at a glance, things like:
 
@@ -51,8 +51,13 @@ We're able to check for changes prior to downloading the files:
 ## Todo
 
 - [ ] Add `data/tlds.json` to source control (it's currently in `gitignore`)
-- [ ] Figure out how to run `server.ts` on val.town
-- [ ] An HTTP + web interface
+- [ ] Build step for `tlds.json` in GH Actions
+- [ ] Pre-calculate the "analysis" numbers, so that they aren't re-calculated for every API request
+- [ ] Val Town manual deploy
+- [ ] GH Actions -> Val Town auto-deploys when the data files are updated
+- [ ] Web UI idea - TLD Managers section & breakdown
+- [ ] Web UI idea - TLD table view, search box, filters for G vs. CC, IDNs, etc
+- [ ] Web UI idea - ZoneDB integration to get "brand" tags in here somehow
 - [ ] Lightweight "monitoring" checks for the ccTLD RDAP servers, which don't have the same SLAs as the generics
 
 ## Done
@@ -63,6 +68,7 @@ We're able to check for changes prior to downloading the files:
 - [x] Tests running in GH Actions
 - [x] Deno dep updates in GH Actions
 - [x] Only update `data/metadata.json` when there are downloaded file updates
+- [x] A basic HTTP + web interface
 
 2025-11-13:
 - [x] A unified, generated `tlds.json` file that includes all the data we need, for an eventual web interface
