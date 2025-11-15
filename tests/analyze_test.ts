@@ -1,4 +1,4 @@
-import { assertEquals } from "@std/assert";
+import { assertEquals } from "jsr:@std/assert@^1.0.15";
 import {
   analyze_tlds_file,
   analyze_rdap_bootstrap,

@@ -1,4 +1,4 @@
-import { assertEquals } from "@std/assert";
+import { assertEquals } from "jsr:@std/assert@^1.0.15";
 import {
   parse_bootstrap_tlds,
   parse_root_zone_db,
