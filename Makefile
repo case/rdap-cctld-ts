@@ -3,6 +3,7 @@ help:
 	@echo "Available commands:"
 	@echo "  make deps              - Install/update dependencies and update lockfile"
 	@echo "  make test              - Run all tests"
+	@echo "  make serve             - Start the local web server"
 	@echo "  make build-tlds-json   - Build the enhanced tlds.json file from IANA data sources"
 	@echo "  make deploy-valtown    - Deploy to Val Town (vt push) and upload Root Zone DB file to blob storage"
 
@@ -15,6 +16,11 @@ deps:
 test:
 	@echo "Running tests…"
 	deno task test
+
+.PHONY: serve
+serve:
+	@echo "Starting local web server…"
+	deno task server
 
 .PHONY: build-tlds-json
 build-tlds-json:
