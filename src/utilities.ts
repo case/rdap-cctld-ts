@@ -79,17 +79,17 @@ function is_cache_fresh(metadata: DownloadMetadata): boolean {
 }
 
 /**
- * Downloads a file from a URL and returns the data
+ * Downloads a file from a URL and returns the data along with response headers
  * Uses conditional requests (If-None-Match/If-Modified-Since) when filename is provided
  * Falls back to Cache-Control max-age checks if no ETag/Last-Modified available
  * @param url - The URL to download from
  * @param filename - Optional filename for conditional request tracking
- * @returns Promise that resolves with the downloaded data, or null if unchanged (304 or cache fresh)
+ * @returns Promise that resolves with the downloaded data and response, or null if unchanged (304 or cache fresh)
  */
 export async function download(
   url: string,
   filename?: string,
-): Promise<ArrayBuffer | null> {
+): Promise<{ data: ArrayBuffer; response: Response } | null> {
   let response: Response;
   const headers: HeadersInit = {};
 
@@ -135,32 +135,42 @@ export async function download(
   try {
     // Get the response as array buffer
     const data = await response.arrayBuffer();
-
-    // Save metadata if filename provided
-    if (filename) {
-      const allMetadata = await load_metadata();
-      const etag = response.headers.get("etag");
-      const lastModified = response.headers.get("last-modified");
-      const cacheControl = response.headers.get("cache-control");
-      const maxAge = parse_cache_max_age(cacheControl);
-
-      allMetadata[filename] = {
-        url,
-        etag: etag || undefined,
-        lastModified: lastModified || undefined,
-        cacheMaxAge: maxAge || undefined,
-        downloadedAt: new Date().toISOString(),
-      };
-
-      await save_metadata(allMetadata);
-    }
-
-    return data;
+    return { data, response };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`Failed to read response data from ${url}: ${message}`);
     throw new Error(`Failed to read response data from ${url}: ${message}`);
   }
+}
+
+/**
+ * Updates the metadata file with information about a downloaded file
+ * Call this only after confirming the file content actually changed and was saved
+ * @param filename - The filename to update metadata for
+ * @param url - The URL the file was downloaded from
+ * @param response - The Response object from the download
+ */
+export async function update_download_metadata(
+  filename: string,
+  url: string,
+  response: Response,
+): Promise<void> {
+  const allMetadata = await load_metadata();
+
+  const etag = response.headers.get("etag");
+  const lastModified = response.headers.get("last-modified");
+  const cacheControl = response.headers.get("cache-control");
+  const maxAge = parse_cache_max_age(cacheControl);
+
+  allMetadata[filename] = {
+    url,
+    etag: etag || undefined,
+    lastModified: lastModified || undefined,
+    cacheMaxAge: maxAge || undefined,
+    downloadedAt: new Date().toISOString(),
+  };
+
+  await save_metadata(allMetadata);
 }
 
 /**

@@ -1,4 +1,4 @@
-import { download, save_to_file, get_data_from_file } from "./utilities.ts";
+import { download, save_to_file, get_data_from_file, update_download_metadata } from "./utilities.ts";
 import {
   validate_iana_bootstrap,
   validate_iana_root_zone_db,
@@ -15,16 +15,19 @@ export async function download_iana_rdap_bootstrap(): Promise<void> {
   const url = IANA_URLS.RDAP_BOOTSTRAP;
   const filename = FILENAMES.RDAP_BOOTSTRAP;
 
-  const data = await download(url, filename);
+  const result = await download(url, filename);
 
-  // If data is null, file hasn't changed (304 Not Modified or cache still fresh)
-  if (data === null) {
+  // If result is null, file hasn't changed (304 Not Modified or cache still fresh)
+  if (result === null) {
     console.log(`\x1b[2m⊘ Skipping ${filename} - file unchanged\x1b[0m`);
     return;
   }
 
+  const { data, response } = result;
+
   validate_iana_bootstrap(data);
   await save_to_file(data, filename);
+  await update_download_metadata(filename, url, response);
   console.log(`\x1b[32m✓ Downloaded ${filename}\x1b[0m`);
 }
 
@@ -61,13 +64,15 @@ export async function download_iana_tlds(): Promise<void> {
   const url = IANA_URLS.TLD_LIST;
   const filename = FILENAMES.TLD_LIST;
 
-  const data = await download(url, filename);
+  const result = await download(url, filename);
 
-  // If data is null, file hasn't changed (304 Not Modified or cache still fresh)
-  if (data === null) {
+  // If result is null, file hasn't changed (304 Not Modified or cache still fresh)
+  if (result === null) {
     console.log(`\x1b[2m⊘ Skipping ${filename} - file unchanged\x1b[0m`);
     return;
   }
+
+  const { data, response } = result;
 
   validate_iana_tlds(data);
 
@@ -93,6 +98,7 @@ export async function download_iana_tlds(): Promise<void> {
 
   if (shouldSave) {
     await save_to_file(data, filename);
+    await update_download_metadata(filename, url, response);
     console.log(`\x1b[32m✓ Downloaded ${filename}\x1b[0m`);
   }
 }
@@ -105,16 +111,19 @@ export async function download_iana_root_zone_db(): Promise<void> {
   const url = IANA_URLS.ROOT_ZONE_DB;
   const filename = FILENAMES.ROOT_ZONE_DB;
 
-  const data = await download(url, filename);
+  const result = await download(url, filename);
 
-  // If data is null, file hasn't changed (304 Not Modified or cache still fresh)
-  if (data === null) {
+  // If result is null, file hasn't changed (304 Not Modified or cache still fresh)
+  if (result === null) {
     console.log(`\x1b[2m⊘ Skipping ${filename} - file unchanged\x1b[0m`);
     return;
   }
 
+  const { data, response } = result;
+
   validate_iana_root_zone_db(data);
   await save_to_file(data, filename);
+  await update_download_metadata(filename, url, response);
   console.log(`\x1b[32m✓ Downloaded ${filename}\x1b[0m`);
 }
 
