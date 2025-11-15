@@ -15,7 +15,7 @@ import {
   getTldsAnalysis,
   getTldsVsRootZoneComparison,
 } from "./api/index.ts";
-import { load } from "jsr:@std/dotenv";
+import { load } from "@std/dotenv";
 
 // Load environment variables from .env file if it exists
 await load({ export: true });
