@@ -1,0 +1,79 @@
+name: Update IANA Data
+
+on:
+  schedule:
+    # Run daily at 2:00 AM UTC / 18:00 US-Pacific
+    - cron: "0 2 * * *"
+  workflow_dispatch: # Allow manual triggering
+
+permissions:
+  contents: write
+
+jobs:
+  update-data:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5.0.0
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2.0.3
+        with:
+          deno-version: v2.x
+
+      - name: Download data files
+        id: download
+        run: make download-data
+
+      - name: Check for changes
+        id: git-check
+        run: |
+          if ! git diff --exit-code data/; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            # Get list of changed files in data/ directory
+            CHANGED_FILES=$(git diff --name-only data/ | sed 's|^data/source/||' | sed 's|^data/||')
+            echo "files<<EOF" >> $GITHUB_OUTPUT
+            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push changes
+        if: steps.git-check.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/
+
+          # Build commit message with actual changed files
+          COMMIT_MSG="Update IANA data files"
+          if [ -n "${{ steps.git-check.outputs.files }}" ]; then
+            COMMIT_MSG="${COMMIT_MSG}
+
+          Changed files:"
+            while IFS= read -r file; do
+              COMMIT_MSG="${COMMIT_MSG}
+          - ${file}"
+            done <<< "${{ steps.git-check.outputs.files }}"
+          fi
+
+          git commit -m "${COMMIT_MSG}"
+          git push
+
+      - name: Notification if download fails
+        if: failure() && steps.download.outcome == 'failure'
+        uses: ./.github/actions/pushover
+        with:
+          pushover_api_token: ${{ secrets.PUSHOVER_API_TOKEN }}
+          pushover_user_key: ${{ secrets.PUSHOVER_USER_KEY }}
+          title: "IANA data download failed - rdap-cctld-ts"
+          message: "Failed to download IANA data files in rdap-cctld-ts"
+
+      - name: Notification if job fails
+        if: failure() && steps.download.outcome != 'failure'
+        uses: ./.github/actions/pushover
+        with:
+          pushover_api_token: ${{ secrets.PUSHOVER_API_TOKEN }}
+          pushover_user_key: ${{ secrets.PUSHOVER_USER_KEY }}
+          title: "IANA data update failed - rdap-cctld-ts"
+          message: "IANA data update job failed in rdap-cctld-ts"

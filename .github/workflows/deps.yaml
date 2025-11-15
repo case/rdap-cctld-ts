@@ -1,0 +1,73 @@
+name: Update Deno Dependencies
+
+on:
+  schedule:
+    # Run biweekly (every 2 weeks) on Fridays at 3:00 PM US-Pacific (11:00 PM UTC)
+    # Day 1-7 and 15-21 of each month covers roughly every 2 weeks
+    - cron: "0 23 1-7,15-21 * 5"
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  update-deps:
+    runs-on: ubuntu-24.04
+    env:
+      PUSHOVER_API_TOKEN: ${{ secrets.PUSHOVER_API_TOKEN }}
+      PUSHOVER_USER_KEY: ${{ secrets.PUSHOVER_USER_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5.0.0
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2.0.3
+        with:
+          deno-version: v2.x
+
+      - name: Update Deno dependencies
+        id: update-deps
+        run: deno outdated --update --latest
+
+      - name: Run tests
+        id: run-tests
+        run: make test
+
+      - name: Check for changes
+        id: git-check
+        run: |
+          git diff --exit-code || echo "changes=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push changes
+        if: steps.git-check.outputs.changes == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Update Deno dependencies"
+          git push
+
+      - name: Notification if success
+        if: steps.git-check.outputs.changes == 'true'
+        uses: ./.github/actions/pushover
+        with:
+          pushover_api_token: ${{ secrets.PUSHOVER_API_TOKEN }}
+          pushover_user_key: ${{ secrets.PUSHOVER_USER_KEY }}
+          title: "Deno deps updated - rdap-cctld-ts"
+          message: "Dependencies successfully updated in rdap-cctld-ts"
+
+      - name: Notification if dependency update fails
+        if: failure() && steps.update-deps.outcome == 'failure'
+        uses: ./.github/actions/pushover
+        with:
+          pushover_api_token: ${{ secrets.PUSHOVER_API_TOKEN }}
+          pushover_user_key: ${{ secrets.PUSHOVER_USER_KEY }}
+          title: "Deno deps update failure - rdap-cctld-ts"
+          message: "Failed to update Deno dependencies in rdap-cctld-ts"
+
+      - name: Notification if tests fail
+        if: failure() && steps.run-tests.outcome == 'failure'
+        uses: ./.github/actions/pushover
+        with:
+          pushover_api_token: ${{ secrets.PUSHOVER_API_TOKEN }}
+          pushover_user_key: ${{ secrets.PUSHOVER_USER_KEY }}
+          title: "Tests failed - rdap-cctld-ts"
+          message: "Tests failed after Deno dependency update in rdap-cctld-ts"
