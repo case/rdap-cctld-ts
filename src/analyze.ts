@@ -1090,6 +1090,8 @@ function analyzeManagerGrouping(
     ccTldCount: number;
     gTldCount: number;
     tlds: string[];
+    ccTlds: string[];
+    gTlds: string[];
     isAlias?: boolean;
     subsidiaries?: Array<{
       name: string;
@@ -1097,6 +1099,8 @@ function analyzeManagerGrouping(
       ccTldCount: number;
       gTldCount: number;
       tlds: string[];
+      ccTlds: string[];
+      gTlds: string[];
     }>;
   }> = [];
 
