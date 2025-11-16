@@ -141,6 +141,6 @@ vite.config.ts.timestamp-*
 
 # Misc
 .DS_Store
-data/generated/tlds.json
+#data/generated/tlds.json
 /temp
 /.playwright-mcp
