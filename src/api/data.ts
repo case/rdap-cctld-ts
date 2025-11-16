@@ -9,7 +9,7 @@
  * - HTTP API routes (via routes.ts)
  */
 
-import { FILENAMES } from "../config.ts";
+import { FILENAMES, LOCAL_PATHS } from "../config.ts";
 import { get_data_from_file } from "../utilities.ts";
 import {
   parse_root_zone_db,
@@ -22,9 +22,12 @@ import {
   analyze_root_zone_db,
   analyze_tlds_file,
   analyze_tlds_json,
+  analyzeManualCcTldData,
   compare_bootstrap_vs_rootzone,
   compare_tlds_vs_rootzone,
   type BootstrapVsRootZoneComparison,
+  type ManualCcTldAnalysis,
+  type ManualRdapEntry,
   type RdapCoverageAnalysis,
   type RootZoneAnalysis,
   type TldCounts,
@@ -135,8 +138,38 @@ export async function getTldsVsRootZoneComparison(): Promise<
  * Get analysis of enhanced tlds.json file
  */
 export async function getTldsJsonAnalysis(): Promise<TldsJsonAnalysis> {
-  const jsonContent = await get_data_from_file("tlds.json", "data");
-  return analyze_tlds_json(jsonContent);
+  const jsonContent = await get_data_from_file(FILENAMES.TLDS_JSON, LOCAL_PATHS.GENERATED_DIR);
+  const supplementalData = await getSupplementalData();
+  return analyze_tlds_json(jsonContent, supplementalData);
+}
+
+/**
+ * Get supplemental data
+ */
+export async function getSupplementalData(): Promise<import("../analyze.ts").SupplementalData> {
+  try {
+    const content = await get_data_from_file(FILENAMES.SUPPLEMENTAL, LOCAL_PATHS.DATA_DIR);
+    return JSON.parse(content) as import("../analyze.ts").SupplementalData;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to load supplemental data: ${message}`);
+  }
+}
+
+/**
+ * Get manual ccTLD RDAP data
+ */
+export async function getManualCcTldData(): Promise<ManualRdapEntry[]> {
+  const supplemental = await getSupplementalData();
+  return supplemental.ccTldRdapServers;
+}
+
+/**
+ * Get analysis of manual ccTLD RDAP data
+ */
+export async function getManualCcTldAnalysis(): Promise<ManualCcTldAnalysis> {
+  const data = await getManualCcTldData();
+  return analyzeManualCcTldData(data);
 }
 
 /**

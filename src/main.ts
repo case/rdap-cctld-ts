@@ -80,7 +80,7 @@ export async function download_iana_tlds(): Promise<void> {
   const newContent = new TextDecoder().decode(data);
 
   // Try to read existing file and compare
-  const filePath = `${LOCAL_PATHS.SOURCE_DIR}/${filename}`;
+  const filePath = `${LOCAL_PATHS.CANONICAL_DIR}/${filename}`;
   let shouldSave = true;
 
   try {
@@ -132,9 +132,7 @@ export async function download_iana_root_zone_db(): Promise<void> {
  * This creates a comprehensive TLD dataset with type, RDAP servers, and IDN info
  */
 export async function build_and_save_tlds_json(): Promise<void> {
-  const filename = "tlds.json";
-
-  console.log(`Building ${filename}...`);
+  console.log(`Building ${FILENAMES.TLDS_JSON}...`);
 
   // Read IANA RDAP bootstrap data
   const rdapBootstrapContent = await get_data_from_file(FILENAMES.RDAP_BOOTSTRAP);
@@ -143,13 +141,14 @@ export async function build_and_save_tlds_json(): Promise<void> {
   // Read Root Zone DB HTML
   const rootZoneContent = await get_data_from_file(FILENAMES.ROOT_ZONE_DB);
 
-  // Read manual ccTLD RDAP data
+  // Read supplemental data (ccTLD RDAP servers)
   let manualCcTldData;
   try {
-    const manualContent = await get_data_from_file("cctld-rdap-manual.json");
-    manualCcTldData = JSON.parse(manualContent);
+    const supplementalContent = await get_data_from_file(FILENAMES.SUPPLEMENTAL, LOCAL_PATHS.DATA_DIR);
+    const supplementalData = JSON.parse(supplementalContent);
+    manualCcTldData = supplementalData.ccTldRdapServers || [];
   } catch (error) {
-    console.warn(`⚠ Could not load manual ccTLD data: ${error}`);
+    console.warn(`⚠ Could not load supplemental data: ${error}`);
     manualCcTldData = [];
   }
 
@@ -160,11 +159,11 @@ export async function build_and_save_tlds_json(): Promise<void> {
     manualCcTldData
   );
 
-  // Save to data/ directory (not data/source/)
+  // Save to generated directory
   const jsonString = JSON.stringify(enhancedData, null, 2);
   const encoder = new TextEncoder();
   const data = encoder.encode(jsonString);
 
-  await save_to_file(data, filename, LOCAL_PATHS.DATA_DIR);
-  console.log(`\x1b[32m✓ Built ${LOCAL_PATHS.DATA_DIR}/${filename} (${enhancedData.services.length} service groups)\x1b[0m`);
+  await save_to_file(data, FILENAMES.TLDS_JSON, LOCAL_PATHS.GENERATED_DIR);
+  console.log(`\x1b[32m✓ Built ${LOCAL_PATHS.GENERATED_DIR}/${FILENAMES.TLDS_JSON} (${enhancedData.services.length} service groups)\x1b[0m`);
 }

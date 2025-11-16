@@ -16,15 +16,23 @@ export const IANA_URLS = {
  */
 export const LOCAL_PATHS = {
   DATA_DIR: "data",
-  SOURCE_DIR: "data/source",
+  CANONICAL_DIR: "data/canonical",
+  GENERATED_DIR: "data/generated",
 } as const;
 
 /**
- * Local filenames for IANA data
+ * Local filenames for IANA data and generated files
  */
 export const FILENAMES = {
-  RDAP_BOOTSTRAP: "iana-rdap-bootstrap.json",
-  TLD_LIST: "iana-tlds.txt",
-  ROOT_ZONE_DB: "iana-root-zone-db.html",
+  // IANA canonical data
+  RDAP_BOOTSTRAP: "iana-rdap.json",
+  TLD_LIST: "iana-all.txt",
+  ROOT_ZONE_DB: "iana-root.html",
+
+  // Generated files
+  TLDS_JSON: "tlds.json",
   METADATA: "metadata.json",
+
+  // Supplemental data
+  SUPPLEMENTAL: "supplemental.json",
 } as const;

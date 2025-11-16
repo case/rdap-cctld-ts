@@ -46,8 +46,9 @@ Deno.test("build_tlds_json - correctly classifies TLD types", async () => {
   const rootZoneContent = await Deno.readTextFile("tests/fixtures/root.html");
 
   // Load manual ccTLD data
-  const manualContent = await Deno.readTextFile("tests/fixtures/cctld-rdap-manual.json");
-  const manualData = JSON.parse(manualContent);
+  const supplementalContent = await Deno.readTextFile("tests/fixtures/supplemental.json");
+  const supplementalData = JSON.parse(supplementalContent);
+  const manualData = supplementalData.ccTldRdapServers;
 
   const result = await build_tlds_json(rdapData.services, rootZoneContent, manualData);
 
@@ -151,8 +152,9 @@ Deno.test("build_tlds_json - integrates manual ccTLD data", async () => {
   const rootZoneContent = await Deno.readTextFile("tests/fixtures/root.html");
 
   // Load manual ccTLD data from fixture
-  const manualContent = await Deno.readTextFile("tests/fixtures/cctld-rdap-manual.json");
-  const manualData = JSON.parse(manualContent);
+  const supplementalContent = await Deno.readTextFile("tests/fixtures/supplemental.json");
+  const supplementalData = JSON.parse(supplementalContent);
+  const manualData = supplementalData.ccTldRdapServers;
 
   const result = await build_tlds_json(rdapData.services, rootZoneContent, manualData);
 

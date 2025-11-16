@@ -16,7 +16,7 @@ interface DownloadMetadata {
  * @returns Record of filename to metadata, or empty object if file doesn't exist
  */
 async function load_metadata(): Promise<Record<string, DownloadMetadata>> {
-  const metadataPath = `${LOCAL_PATHS.DATA_DIR}/${FILENAMES.METADATA}`;
+  const metadataPath = `${LOCAL_PATHS.GENERATED_DIR}/${FILENAMES.METADATA}`;
 
   try {
     const content = await Deno.readTextFile(metadataPath);
@@ -34,10 +34,10 @@ async function load_metadata(): Promise<Record<string, DownloadMetadata>> {
 async function save_metadata(
   metadata: Record<string, DownloadMetadata>,
 ): Promise<void> {
-  const metadataPath = `${LOCAL_PATHS.DATA_DIR}/${FILENAMES.METADATA}`;
+  const metadataPath = `${LOCAL_PATHS.GENERATED_DIR}/${FILENAMES.METADATA}`;
 
   try {
-    await Deno.mkdir(LOCAL_PATHS.DATA_DIR, { recursive: true });
+    await Deno.mkdir(LOCAL_PATHS.GENERATED_DIR, { recursive: true });
     await Deno.writeTextFile(metadataPath, JSON.stringify(metadata, null, 2));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -177,13 +177,13 @@ export async function update_download_metadata(
  * Saves data to a file in the specified directory
  * @param data - The data to save (as ArrayBuffer or Uint8Array)
  * @param filename - The name to save the file as
- * @param directory - The directory to save to (defaults to data/source)
+ * @param directory - The directory to save to (defaults to data/canonical)
  * @returns Promise that resolves when save is complete
  */
 export async function save_to_file(
   data: ArrayBuffer | Uint8Array,
   filename: string,
-  directory: string = LOCAL_PATHS.SOURCE_DIR,
+  directory: string = LOCAL_PATHS.CANONICAL_DIR,
 ): Promise<void> {
   const outputPath = `${directory}/${filename}`;
 
@@ -212,11 +212,11 @@ export async function save_to_file(
  * Reads from local filesystem in all environments.
  *
  * @param filename - The filename to read
- * @param directory - Optional directory path (defaults to data/source)
+ * @param directory - Optional directory path (defaults to data/canonical)
  * @returns Promise that resolves with the file content as a string
  * @throws Error if file cannot be read
  */
-export async function get_data_from_file(filename: string, directory: string = LOCAL_PATHS.SOURCE_DIR): Promise<string> {
+export async function get_data_from_file(filename: string, directory: string = LOCAL_PATHS.CANONICAL_DIR): Promise<string> {
   const filePath = `${directory}/${filename}`;
   try {
     return await Deno.readTextFile(filePath);

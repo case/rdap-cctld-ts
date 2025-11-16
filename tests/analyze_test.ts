@@ -195,12 +195,13 @@ Deno.test("analyze_root_zone_db - counts IDNs correctly", async () => {
 
 Deno.test("manual ccTLD file has no duplicates with IANA RDAP bootstrap (production data)", async () => {
   // Load IANA RDAP bootstrap from production data
-  const rdapContent = await Deno.readTextFile("data/source/iana-rdap-bootstrap.json");
+  const rdapContent = await Deno.readTextFile("data/canonical/iana-rdap.json");
   const rdapData = JSON.parse(rdapContent);
 
   // Load manual ccTLD data from production data
-  const manualContent = await Deno.readTextFile("data/source/cctld-rdap-manual.json");
-  const manualData = JSON.parse(manualContent);
+  const supplementalContent = await Deno.readTextFile("data/supplemental.json");
+  const supplementalData = JSON.parse(supplementalContent);
+  const manualData = supplementalData.ccTldRdapServers;
 
   // Extract TLDs from IANA RDAP bootstrap
   const rdapTlds = new Set<string>();
