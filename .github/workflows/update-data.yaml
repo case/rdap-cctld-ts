@@ -26,13 +26,17 @@ jobs:
         id: download
         run: make download-data
 
+      - name: Build tlds.json
+        id: build
+        run: make build
+
       - name: Check for changes
         id: git-check
         run: |
           if ! git diff --exit-code data/; then
             echo "changed=true" >> $GITHUB_OUTPUT
-            # Get list of changed files in data/ directory
-            CHANGED_FILES=$(git diff --name-only data/ | sed 's|^data/source/||' | sed 's|^data/||')
+            # Get list of changed files in data/ directory and generated files
+            CHANGED_FILES=$(git diff --name-only data/ | sed 's|^data/canonical/||' | sed 's|^data/generated/||')
             echo "files<<EOF" >> $GITHUB_OUTPUT
             echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
@@ -69,8 +73,17 @@ jobs:
           title: "IANA data download failed - rdap-cctld-ts"
           message: "Failed to download IANA data files in rdap-cctld-ts"
 
+      - name: Notification if build fails
+        if: failure() && steps.build.outcome == 'failure'
+        uses: ./.github/actions/pushover
+        with:
+          pushover_api_token: ${{ secrets.PUSHOVER_API_TOKEN }}
+          pushover_user_key: ${{ secrets.PUSHOVER_USER_KEY }}
+          title: "tlds.json build failed - rdap-cctld-ts"
+          message: "Failed to build tlds.json in rdap-cctld-ts"
+
       - name: Notification if job fails
-        if: failure() && steps.download.outcome != 'failure'
+        if: failure() && steps.download.outcome != 'failure' && steps.build.outcome != 'failure'
         uses: ./.github/actions/pushover
         with:
           pushover_api_token: ${{ secrets.PUSHOVER_API_TOKEN }}
