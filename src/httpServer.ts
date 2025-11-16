@@ -33,7 +33,27 @@ async function handleRequest(req: Request): Promise<Response> {
     }
   }
 
-  // Serve static files from src/web directory
+  // Serve TLD managers page
+  if (url.pathname === "/tld-managers") {
+    try {
+      const html = await Deno.readTextFile("src/web/tld-managers.html");
+      return new Response(html, {
+        headers: { "content-type": "text/html; charset=utf-8" },
+      });
+    } catch (error) {
+      return new Response("Error loading tld-managers.html", { status: 500 });
+    }
+  }
+
+  // Serve static files (CSS, JS) from src/web/static
+  if (url.pathname.startsWith("/static/")) {
+    return serveDir(req, {
+      fsRoot: "src/web",
+      urlRoot: "",
+    });
+  }
+
+  // Serve static files from src/web directory (legacy/fallback)
   return serveDir(req, {
     fsRoot: "src/web",
     urlRoot: "",
