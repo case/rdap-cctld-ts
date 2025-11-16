@@ -229,3 +229,47 @@ export async function get_data_from_file(filename: string, directory: string = L
   }
 }
 
+/**
+ * Compares two JSON objects for equality, optionally ignoring specific fields
+ * @param obj1 - First object to compare
+ * @param obj2 - Second object to compare
+ * @param ignoreFields - Array of field paths to ignore (e.g., ['generated', 'metadata.timestamp'])
+ * @returns true if objects are equal (ignoring specified fields), false otherwise
+ */
+export function compare_json_ignore_fields(
+  obj1: unknown,
+  obj2: unknown,
+  ignoreFields: string[] = [],
+): boolean {
+  // Helper function to remove ignored fields from an object
+  const removeIgnoredFields = (obj: unknown): unknown => {
+    if (obj === null || typeof obj !== 'object') {
+      return obj;
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map(item => removeIgnoredFields(item));
+    }
+
+    const result: Record<string, unknown> = {};
+    const objRecord = obj as Record<string, unknown>;
+
+    for (const key in objRecord) {
+      if (Object.prototype.hasOwnProperty.call(objRecord, key)) {
+        // Check if this field should be ignored
+        if (!ignoreFields.includes(key)) {
+          result[key] = removeIgnoredFields(objRecord[key]);
+        }
+      }
+    }
+
+    return result;
+  };
+
+  const cleaned1 = removeIgnoredFields(obj1);
+  const cleaned2 = removeIgnoredFields(obj2);
+
+  // Deep equality check by comparing JSON strings
+  return JSON.stringify(cleaned1) === JSON.stringify(cleaned2);
+}
+

@@ -1,0 +1,27 @@
+{
+  "generated": "2025-11-15T05:00:00Z",
+  "services": [
+    {
+      "tlds": ["com", "net"],
+      "servers": ["https://rdap.verisign.com/com/v1/"],
+      "tags": ["gTLD"],
+      "manager": "VeriSign Global Registry Services"
+    },
+    {
+      "tlds": ["org"],
+      "servers": ["https://rdap.publicinterestregistry.org/rdap/"],
+      "tags": ["gTLD"],
+      "manager": "Public Interest Registry"
+    }
+  ],
+  "metadata": {
+    "total": 3,
+    "ccTlds": 0,
+    "gTlds": 3,
+    "withRdap": 3,
+    "withoutRdap": 0
+  },
+  "idnMap": {
+    "xn--test": "тест"
+  }
+}

@@ -1,4 +1,4 @@
-import { download, save_to_file, get_data_from_file, update_download_metadata } from "./utilities.ts";
+import { download, save_to_file, get_data_from_file, update_download_metadata, compare_json_ignore_fields } from "./utilities.ts";
 import {
   validate_iana_bootstrap,
   validate_iana_root_zone_db,
@@ -159,11 +159,31 @@ export async function build_and_save_tlds_json(): Promise<void> {
     supplementalCcTldData
   );
 
-  // Save to generated directory
-  const jsonString = JSON.stringify(enhancedData, null, 2);
-  const encoder = new TextEncoder();
-  const data = encoder.encode(jsonString);
+  // Check if the actual content has changed (ignore timestamp)
+  const filePath = `${LOCAL_PATHS.GENERATED_DIR}/${FILENAMES.TLDS_JSON}`;
+  let shouldSave = true;
 
-  await save_to_file(data, FILENAMES.TLDS_JSON, LOCAL_PATHS.GENERATED_DIR);
-  console.log(`\x1b[32m✓ Built ${LOCAL_PATHS.GENERATED_DIR}/${FILENAMES.TLDS_JSON} (${enhancedData.services.length} service groups)\x1b[0m`);
+  try {
+    const existingContent = await Deno.readTextFile(filePath);
+    const existingData = JSON.parse(existingContent);
+
+    // Compare data ignoring the 'generated' timestamp field
+    if (compare_json_ignore_fields(enhancedData, existingData, ['generated'])) {
+      shouldSave = false;
+      console.log(`\x1b[2m⊘ Skipping ${FILENAMES.TLDS_JSON} - content unchanged (only timestamp would update)\x1b[0m`);
+    }
+  } catch {
+    // File doesn't exist or can't be read, save it
+    shouldSave = true;
+  }
+
+  if (shouldSave) {
+    // Save to generated directory
+    const jsonString = JSON.stringify(enhancedData, null, 2);
+    const encoder = new TextEncoder();
+    const data = encoder.encode(jsonString);
+
+    await save_to_file(data, FILENAMES.TLDS_JSON, LOCAL_PATHS.GENERATED_DIR);
+    console.log(`\x1b[32m✓ Built ${LOCAL_PATHS.GENERATED_DIR}/${FILENAMES.TLDS_JSON} (${enhancedData.services.length} service groups)\x1b[0m`);
+  }
 }
