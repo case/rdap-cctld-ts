@@ -11,7 +11,6 @@ import {
   getSupplementalCcTldAnalysis,
   getSourceFilesAnalysis,
   getRdapBootstrapAnalysis,
-  getRdapCoverageAnalysis,
   getRootZoneAnalysis,
   getTldsAnalysis,
   getTldsJsonAnalysis,

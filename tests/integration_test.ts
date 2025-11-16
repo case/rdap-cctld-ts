@@ -23,7 +23,7 @@ Deno.test("Integration - All canonical IANA files exist", async () => {
     try {
       const stat = await Deno.stat(path);
       assertEquals(stat.isFile, true, `${path} should be a file`);
-    } catch (error) {
+    } catch (_error) {
       throw new Error(
         `Canonical file not found: ${path}\nRun 'deno task cli --download' to download IANA files.`,
       );
@@ -36,7 +36,7 @@ Deno.test("Integration - Supplemental data file exists", async () => {
   try {
     const stat = await Deno.stat(path);
     assertEquals(stat.isFile, true, `${path} should be a file`);
-  } catch (error) {
+  } catch (_error) {
     throw new Error(
       `Supplemental data file not found: ${path}\nThis file should be maintained manually.`,
     );
@@ -55,7 +55,7 @@ Deno.test("Integration - Generated files exist", async () => {
     try {
       const stat = await Deno.stat(path);
       assertEquals(stat.isFile, true, `${path} should be a file`);
-    } catch (error) {
+    } catch (_error) {
       throw new Error(
         `Generated file not found: ${path}\nRun 'deno task cli --build' to generate files.`,
       );
@@ -129,7 +129,7 @@ Deno.test("Integration - Web app HTML files exist", async () => {
     try {
       const stat = await Deno.stat(path);
       assertEquals(stat.isFile, true, `${path} should be a file`);
-    } catch (error) {
+    } catch (_error) {
       throw new Error(`Web file not found: ${path}`);
     }
   }
@@ -331,7 +331,7 @@ Deno.test("Integration - Test fixtures exist", async () => {
     try {
       const stat = await Deno.stat(fixture);
       assertEquals(stat.isFile, true, `${fixture} should exist`);
-    } catch (error) {
+    } catch (_error) {
       throw new Error(`Test fixture not found: ${fixture}`);
     }
   }
@@ -354,7 +354,7 @@ Deno.test("Integration - Directory structure is correct", async () => {
     try {
       const stat = await Deno.stat(dir);
       assertEquals(stat.isDirectory, true, `${dir} should be a directory`);
-    } catch (error) {
+    } catch (_error) {
       throw new Error(`Required directory not found: ${dir}`);
     }
   }

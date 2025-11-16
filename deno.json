@@ -19,7 +19,10 @@
     "server": "deno run --no-check --allow-import --allow-env --allow-net --allow-read src/httpServer.ts",
     "deploy": "deno run --allow-read --allow-net --allow-env util/deploy.ts",
     "test": "deno test --allow-read --allow-import",
-    "test:coverage": "deno test --allow-read --allow-import --coverage=cov_profile"
+    "test:coverage": "deno test --allow-read --allow-import --coverage=cov_profile",
+    "check": "deno check --allow-import src/**/*.ts tests/**/*.ts",
+    "lint": "deno lint src/ tests/",
+    "fmt:check": "deno fmt --check src/ tests/"
   },
   "compilerOptions": {
     "noImplicitAny": false,
@@ -35,6 +38,7 @@
   },
   "lint": {
     "include": ["deno:/https/esm.town/**/*"],
+    "exclude": ["src/web/static/**/*.js"],
     "rules": {
       "exclude": ["no-explicit-any"]
     }

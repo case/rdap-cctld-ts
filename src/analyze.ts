@@ -6,7 +6,6 @@ import {
   parse_bootstrap_tlds,
   parse_root_zone_db,
   parse_tlds_file,
-  type TldEntry,
 } from "./parse.ts";
 
 /**
@@ -124,6 +123,7 @@ export interface TldsJsonAnalysis extends TldCounts {
  */
 function get_idn_format(tld: string): "ascii" | "unicode" | null {
   if (tld.startsWith("xn--")) return "ascii";
+  // deno-lint-ignore no-control-regex
   if (/[^\x00-\x7F]/.test(tld)) return "unicode";
   return null;
 }
@@ -692,7 +692,7 @@ export async function build_tlds_json(
         if (entry.manager) {
           tldManagerMap.set(ascii, entry.manager);
         }
-      } catch (error) {
+      } catch (_error) {
         // Conversion failed, skip
       }
     }
@@ -753,9 +753,10 @@ export async function build_tlds_json(
 
   // Also handle ALL delegated TLDs without RDAP servers (both ccTLDs and gTLDs)
   const tldsWithoutRdap = new Set<string>();
-  for (const [tld, type] of tldTypeMap.entries()) {
+  for (const [tld, _type] of tldTypeMap.entries()) {
     if (!tldToServers.has(tld)) {
       // Only add punycode version for IDNs (skip Unicode variants since they're duplicates)
+      // deno-lint-ignore no-control-regex
       if (tld.startsWith("xn--") || !/[^\x00-\x7F]/.test(tld)) {
         tldsWithoutRdap.add(tld);
       }
@@ -784,16 +785,17 @@ export async function build_tlds_json(
         try {
           const unicode = toUnicode(tld);
           idn = { ascii: tld, unicode };
-        } catch (error) {
+        } catch (_error) {
           // Conversion failed, just use ASCII
           idn = { ascii: tld, unicode: tld };
         }
+        // deno-lint-ignore no-control-regex
       } else if (/[^\x00-\x7F]/.test(tld)) {
         // Unicode format - convert to ASCII
         try {
           const ascii = toASCII(tld);
           idn = { ascii, unicode: tld };
-        } catch (error) {
+        } catch (_error) {
           // Conversion failed, just use unicode
           idn = { ascii: tld, unicode: tld };
         }

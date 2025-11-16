@@ -28,7 +28,7 @@ async function handleRequest(req: Request): Promise<Response> {
       return new Response(html, {
         headers: { "content-type": "text/html; charset=utf-8" },
       });
-    } catch (error) {
+    } catch (_error) {
       return new Response("Error loading index.html", { status: 500 });
     }
   }
@@ -40,7 +40,7 @@ async function handleRequest(req: Request): Promise<Response> {
       return new Response(html, {
         headers: { "content-type": "text/html; charset=utf-8" },
       });
-    } catch (error) {
+    } catch (_error) {
       return new Response("Error loading tld-managers.html", { status: 500 });
     }
   }
