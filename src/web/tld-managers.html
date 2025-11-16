@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TLD Managers - IANA Top-Level Domain Explorer</title>
+  <link rel="stylesheet" href="/static/css/tld-managers.css">
+  <script type="module" src="/static/js/tld-managers.js"></script>
+</head>
+<body x-data="app">
+  <div class="theme-toggle" @click="toggleTheme()" :title="getThemeLabel()">
+    <span x-text="getThemeIcon()"></span>
+  </div>
+
+  <h1>TLD Managers</h1>
+  <p class="subtitle">Exploring TLD registry operators and their managed domains</p>
+  <p class="subtitle">Last updated: <span x-text="new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })"></span></p>
+
+  <div class="nav">
+    <a href="/">← Back to Overview</a>
+  </div>
+
+  <template x-if="loading">
+    <div class="loading">Loading data...</div>
+  </template>
+
+  <template x-if="error">
+    <div style="color: red; padding: 1rem; border: 1px solid red; border-radius: 4px;">
+      <strong>Error:</strong> <span x-text="error"></span>
+    </div>
+  </template>
+
+  <template x-if="!loading && !error && data">
+    <div>
+      <div class="stat-summary">
+        <div class="stat">
+          <div class="stat-label">Total Unique Managers</div>
+          <div class="stat-value" x-text="formatNumber(data.managerGrouping.totalUniqueManagers)"></div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Managers with 2+ TLDs</div>
+          <div class="stat-value" x-text="formatNumber(data.managerGrouping.managersWithMultipleTlds)"></div>
+        </div>
+      </div>
+
+      <h2>TLD Managers</h2>
+
+      <div class="filter-controls">
+        <span class="filter-label">Filter:</span>
+        <button class="filter-btn" :class="{ 'active': filter === 'all' }" @click="setFilter('all')">All</button>
+        <button class="filter-btn" :class="{ 'active': filter === 'gtld' }" @click="setFilter('gtld')">gTLDs</button>
+        <button class="filter-btn" :class="{ 'active': filter === 'cctld' }" @click="setFilter('cctld')">ccTLDs</button>
+      </div>
+
+      <table class="managers-table">
+        <thead>
+          <tr>
+            <th class="sortable-header" style="width: 60%" @click="sortBy('manager')">
+              TLD Manager
+              <span class="sort-indicator" :class="{ 'active': sortColumn === 'manager' }" x-text="getSortIndicator('manager')"></span>
+            </th>
+            <th class="sortable-header" style="width: 13%; text-align: right;" @click="sortBy('tldCount')">
+              Total
+              <span class="sort-indicator" :class="{ 'active': sortColumn === 'tldCount' }" x-text="getSortIndicator('tldCount')"></span>
+            </th>
+            <th class="sortable-header" style="width: 13%; text-align: right;" @click="sortBy('ccTldCount')">
+              ccTLDs <span x-text="data ? '(' + formatNumber(data.ccTlds) + ')' : ''"></span>
+              <span class="sort-indicator" :class="{ 'active': sortColumn === 'ccTldCount' }" x-text="getSortIndicator('ccTldCount')"></span>
+            </th>
+            <th class="sortable-header" style="width: 14%; text-align: right;" @click="sortBy('gTldCount')">
+              gTLDs <span x-text="data ? '(' + formatNumber(data.gTlds) + ')' : ''"></span>
+              <span class="sort-indicator" :class="{ 'active': sortColumn === 'gTldCount' }" x-text="getSortIndicator('gTldCount')"></span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="(group, index) in getSortedManagers()" :key="index">
+            <tr class="manager-row">
+              <td>
+                <div class="manager-name" x-text="group.manager"></div>
+
+                <!-- Only show parent TLDs if there are NO subsidiaries -->
+                <template x-if="(!group.isAlias || !group.subsidiaries || group.subsidiaries.length === 0) && getFilteredTlds(group).length > 0">
+                  <div class="tld-box" x-data="{ isTruncated: false }"
+                       x-init="$nextTick(() => { const el = $el.querySelector('.tld-list'); isTruncated = el.scrollWidth > el.clientWidth; })"
+                       x-effect="$nextTick(() => { const el = $el.querySelector('.tld-list'); if (el) isTruncated = el.scrollWidth > el.clientWidth; }); filter">
+                    <button class="tld-toggle-btn" @click="toggleTlds('parent-' + index, $event)" :title="isTldsExpanded('parent-' + index) ? 'Show less' : 'Show all'" x-show="isTruncated || isTldsExpanded('parent-' + index)">
+                      <span x-text="isTldsExpanded('parent-' + index) ? '−' : '+'"></span>
+                    </button>
+                    <span class="tld-list" :class="{ 'expanded': isTldsExpanded('parent-' + index) }">
+                      <span x-text="getFilteredTlds(group).join(', ')"></span>
+                    </span>
+                  </div>
+                </template>
+
+                <!-- Subsidiary Rows (nested in same cell) -->
+                <template x-if="group.isAlias && group.subsidiaries && group.subsidiaries.length > 0">
+                  <div style="margin-top: 1rem;">
+                    <template x-for="(sub, subIndex) in group.subsidiaries" :key="subIndex">
+                      <template x-if="getFilteredTlds(sub).length > 0">
+                        <div style="margin-bottom: 0.75rem;">
+                          <div style="margin-bottom: 0.5rem;">
+                            <span style="opacity: 0.5;">└─</span> <span x-text="sub.name"></span>
+                          </div>
+                          <div class="tld-box" x-data="{ isTruncated: false }"
+                               x-init="$nextTick(() => { const el = $el.querySelector('.tld-list'); isTruncated = el.scrollWidth > el.clientWidth; })"
+                               x-effect="$nextTick(() => { const el = $el.querySelector('.tld-list'); if (el) isTruncated = el.scrollWidth > el.clientWidth; }); filter">
+                            <button class="tld-toggle-btn" @click="toggleTlds('sub-' + index + '-' + subIndex, $event)" :title="isTldsExpanded('sub-' + index + '-' + subIndex) ? 'Show less' : 'Show all'" x-show="isTruncated || isTldsExpanded('sub-' + index + '-' + subIndex)">
+                              <span x-text="isTldsExpanded('sub-' + index + '-' + subIndex) ? '−' : '+'"></span>
+                            </button>
+                            <span class="tld-list" :class="{ 'expanded': isTldsExpanded('sub-' + index + '-' + subIndex) }">
+                              <span x-text="getFilteredTlds(sub).join(', ')"></span>
+                            </span>
+                          </div>
+                        </div>
+                      </template>
+                    </template>
+                  </div>
+                </template>
+              </td>
+              <td style="text-align: right;" x-text="formatNumber(group.tldCount)"></td>
+              <td style="text-align: right;" x-text="formatNumber(group.ccTldCount)"></td>
+              <td style="text-align: right;" x-text="formatNumber(group.gTldCount)"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </template>
+</body>
+</html>

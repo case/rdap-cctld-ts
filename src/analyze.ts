@@ -78,6 +78,33 @@ export interface RdapVsManagerComparison {
 }
 
 /**
+ * TLD Manager grouping information
+ */
+export interface ManagerGrouping {
+  totalUniqueManagers: number;
+  managersWithMultipleTlds: number;
+  managerGroups: Array<{
+    manager: string;
+    tldCount: number;
+    ccTldCount: number;
+    gTldCount: number;
+    tlds: string[];
+    ccTlds: string[];
+    gTlds: string[];
+    isAlias?: boolean; // true if this is an alias parent
+    subsidiaries?: Array<{
+      name: string;
+      tldCount: number;
+      ccTldCount: number;
+      gTldCount: number;
+      tlds: string[];
+      ccTlds: string[];
+      gTlds: string[];
+    }>;
+  }>;
+}
+
+/**
  * Enhanced TLDs JSON analysis
  */
 export interface TldsJsonAnalysis extends TldCounts {
@@ -87,6 +114,8 @@ export interface TldsJsonAnalysis extends TldCounts {
   ccTldsWithRdap: number;
   gTldsWithRdap: number;
   rdapVsManagerComparison: RdapVsManagerComparison;
+  managerGrouping: ManagerGrouping;
+  idnMap: Record<string, string>; // ASCII to Unicode mapping
 }
 
 /**
@@ -571,13 +600,48 @@ interface EnhancedTldJson {
 /**
  * Manual ccTLD RDAP entry
  */
-interface ManualRdapEntry {
+export interface ManualRdapEntry {
   tld: string;
   rdapServer: string;
   backendOperator: string;
   dateUpdated: string;
   source: string;
   notes: string;
+}
+
+/**
+ * Manager alias entry with source attribution
+ */
+export interface ManagerAliasEntry {
+  name: string;
+  source: string | null;
+}
+
+/**
+ * Supplemental data structure
+ */
+export interface SupplementalData {
+  ccTldRdapServers: ManualRdapEntry[];
+  managerAliases: Record<string, ManagerAliasEntry[]>;
+}
+
+/**
+ * Analysis of manual ccTLD RDAP data
+ */
+export interface ManualCcTldAnalysis {
+  totalTlds: number;
+  uniqueRdapHosts: number;
+  uniqueBackendOperators: number;
+  rdapHostGroups: Array<{
+    host: string;
+    tldCount: number;
+    tlds: string[];
+  }>;
+  backendOperatorGroups: Array<{
+    operator: string;
+    tldCount: number;
+    tlds: string[];
+  }>;
 }
 
 /**
@@ -775,9 +839,13 @@ export async function build_tlds_json(
 /**
  * Analyze the enhanced tlds.json file
  * @param jsonContent - The tlds.json content as a string
+ * @param supplementalData - Optional supplemental data with manager aliases
  * @returns Analysis of the TLDs JSON file
  */
-export function analyze_tlds_json(jsonContent: string): TldsJsonAnalysis {
+export function analyze_tlds_json(
+  jsonContent: string,
+  supplementalData?: SupplementalData,
+): TldsJsonAnalysis {
   const data = JSON.parse(jsonContent);
 
   // Flatten all TLDs from all services
@@ -786,6 +854,14 @@ export function analyze_tlds_json(jsonContent: string): TldsJsonAnalysis {
   for (const service of data.services) {
     if (service.tlds && Array.isArray(service.tlds)) {
       allTlds.push(...service.tlds);
+    }
+  }
+
+  // Build IDN mapping (ASCII to Unicode)
+  const idnMap: Record<string, string> = {};
+  for (const tldObj of allTlds) {
+    if (tldObj.idn && tldObj.idn.ascii !== tldObj.idn.unicode) {
+      idnMap[tldObj.idn.ascii] = tldObj.idn.unicode;
     }
   }
 
@@ -820,6 +896,9 @@ export function analyze_tlds_json(jsonContent: string): TldsJsonAnalysis {
   // Analyze RDAP server groupings vs TLD manager groupings
   const rdapVsManagerComparison = analyzeRdapVsManager(data.services);
 
+  // Analyze TLD manager groupings
+  const managerGrouping = analyzeManagerGrouping(data.services, supplementalData);
+
   return {
     total: allTlds.length,
     ccTlds,
@@ -838,6 +917,8 @@ export function analyze_tlds_json(jsonContent: string): TldsJsonAnalysis {
     ccTldsWithRdap,
     gTldsWithRdap,
     rdapVsManagerComparison,
+    managerGrouping,
+    idnMap,
   };
 }
 
@@ -912,5 +993,213 @@ function analyzeRdapVsManager(
     managerGroupsWithMultipleTlds,
     largestRdapGroup,
     largestManagerGroup,
+  };
+}
+
+/**
+ * Analyze TLD manager groupings with alias consolidation
+ */
+function analyzeManagerGrouping(
+  services: Array<{
+    tlds: Array<{ tld: string; type: "gtld" | "cctld"; manager?: string }>;
+    rdapServers: string[];
+  }>,
+  supplementalData?: SupplementalData,
+): ManagerGrouping {
+  // Group TLDs by manager
+  const managerToTlds = new Map<
+    string,
+    { tlds: string[]; ccTlds: string[]; gTlds: string[] }
+  >();
+
+  for (const service of services) {
+    for (const tld of service.tlds) {
+      if (tld.manager) {
+        const existing = managerToTlds.get(tld.manager) || {
+          tlds: [],
+          ccTlds: [],
+          gTlds: [],
+        };
+        existing.tlds.push(tld.tld);
+        if (tld.type === "cctld") {
+          existing.ccTlds.push(tld.tld);
+        } else {
+          existing.gTlds.push(tld.tld);
+        }
+        managerToTlds.set(tld.manager, existing);
+      }
+    }
+  }
+
+  const totalUniqueManagers = managerToTlds.size;
+  const managersWithMultipleTlds = Array.from(managerToTlds.values()).filter(
+    (group) => group.tlds.length > 1,
+  ).length;
+
+  // Build reverse lookup: manager name -> alias name
+  const managerToAlias = new Map<string, string>();
+  if (supplementalData?.managerAliases) {
+    for (const [aliasName, entries] of Object.entries(supplementalData.managerAliases)) {
+      for (const entry of entries) {
+        managerToAlias.set(entry.name, aliasName);
+      }
+    }
+  }
+
+  // Build manager groups with alias consolidation
+  const aliasGroups = new Map<string, {
+    tlds: string[];
+    ccTlds: string[];
+    gTlds: string[];
+    subsidiaries: Map<string, { tlds: string[]; ccTlds: string[]; gTlds: string[] }>;
+  }>();
+
+  const standaloneManagers = new Map<string, { tlds: string[]; ccTlds: string[]; gTlds: string[] }>();
+
+  for (const [manager, group] of managerToTlds.entries()) {
+    const aliasName = managerToAlias.get(manager);
+
+    if (aliasName) {
+      // This manager belongs to an alias group
+      const existing = aliasGroups.get(aliasName) || {
+        tlds: [] as string[],
+        ccTlds: [] as string[],
+        gTlds: [] as string[],
+        subsidiaries: new Map<string, { tlds: string[]; ccTlds: string[]; gTlds: string[] }>(),
+      };
+
+      // Add TLDs to the alias group total
+      existing.tlds.push(...group.tlds);
+      existing.ccTlds.push(...group.ccTlds);
+      existing.gTlds.push(...group.gTlds);
+
+      // Track this subsidiary
+      existing.subsidiaries.set(manager, group);
+
+      aliasGroups.set(aliasName, existing);
+    } else {
+      // Standalone manager (not part of any alias)
+      standaloneManagers.set(manager, group);
+    }
+  }
+
+  // Build final manager groups array
+  const managerGroups: Array<{
+    manager: string;
+    tldCount: number;
+    ccTldCount: number;
+    gTldCount: number;
+    tlds: string[];
+    isAlias?: boolean;
+    subsidiaries?: Array<{
+      name: string;
+      tldCount: number;
+      ccTldCount: number;
+      gTldCount: number;
+      tlds: string[];
+    }>;
+  }> = [];
+
+  // Add alias groups
+  for (const [aliasName, group] of aliasGroups.entries()) {
+    managerGroups.push({
+      manager: aliasName,
+      tldCount: group.tlds.length,
+      ccTldCount: group.ccTlds.length,
+      gTldCount: group.gTlds.length,
+      tlds: group.tlds.sort(),
+      ccTlds: group.ccTlds.sort(),
+      gTlds: group.gTlds.sort(),
+      isAlias: true,
+      subsidiaries: Array.from(group.subsidiaries.entries()).map(([name, subGroup]) => ({
+        name,
+        tldCount: subGroup.tlds.length,
+        ccTldCount: subGroup.ccTlds.length,
+        gTldCount: subGroup.gTlds.length,
+        tlds: subGroup.tlds.sort(),
+        ccTlds: subGroup.ccTlds.sort(),
+        gTlds: subGroup.gTlds.sort(),
+      })).sort((a, b) => b.tldCount - a.tldCount),
+    });
+  }
+
+  // Add standalone managers
+  for (const [manager, group] of standaloneManagers.entries()) {
+    managerGroups.push({
+      manager,
+      tldCount: group.tlds.length,
+      ccTldCount: group.ccTlds.length,
+      gTldCount: group.gTlds.length,
+      tlds: group.tlds.sort(),
+      ccTlds: group.ccTlds.sort(),
+      gTlds: group.gTlds.sort(),
+    });
+  }
+
+  // Sort by TLD count (descending)
+  managerGroups.sort((a, b) => b.tldCount - a.tldCount);
+
+  return {
+    totalUniqueManagers,
+    managersWithMultipleTlds,
+    managerGroups,
+  };
+}
+
+/**
+ * Analyze manual ccTLD RDAP data
+ */
+export function analyzeManualCcTldData(
+  data: ManualRdapEntry[],
+): ManualCcTldAnalysis {
+  // Group by RDAP host (extract hostname from URL)
+  const hostToTlds = new Map<string, string[]>();
+
+  for (const entry of data) {
+    try {
+      const url = new URL(entry.rdapServer);
+      const host = url.hostname;
+      const existing = hostToTlds.get(host) || [];
+      existing.push(entry.tld);
+      hostToTlds.set(host, existing);
+    } catch {
+      // Invalid URL, skip
+    }
+  }
+
+  // Group by backend operator
+  const operatorToTlds = new Map<string, string[]>();
+
+  for (const entry of data) {
+    const operator = entry.backendOperator;
+    const existing = operatorToTlds.get(operator) || [];
+    existing.push(entry.tld);
+    operatorToTlds.set(operator, existing);
+  }
+
+  // Build RDAP host groups
+  const rdapHostGroups = Array.from(hostToTlds.entries())
+    .map(([host, tlds]) => ({
+      host,
+      tldCount: tlds.length,
+      tlds: tlds.sort(),
+    }))
+    .sort((a, b) => b.tldCount - a.tldCount);
+
+  // Build backend operator groups
+  const backendOperatorGroups = Array.from(operatorToTlds.entries())
+    .map(([operator, tlds]) => ({
+      operator,
+      tldCount: tlds.length,
+      tlds: tlds.sort(),
+    }))
+    .sort((a, b) => b.tldCount - a.tldCount);
+
+  return {
+    totalTlds: data.length,
+    uniqueRdapHosts: hostToTlds.size,
+    uniqueBackendOperators: operatorToTlds.size,
+    rdapHostGroups,
+    backendOperatorGroups,
   };
 }
