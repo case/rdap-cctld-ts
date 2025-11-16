@@ -1,5 +1,29 @@
 # rdap-cctld-ts
 
+## Background
+
+[IANA](https://www.iana.org/) publishes some raw, canonical data about the DNS and root zone TLDs. This project is an attempt to make it easier to explore and answer questions about this canonical data.
+
+Here are some of the types of data that IANA publishes:
+
+- A list of all top-level domains
+- ASCII and Unicode variants of IDN (internationalized) TLDs
+- TLD categories, e.g. `generic`, `country-code`, `sponsored`, etc.
+- TLD Managers, e.g. `VeriSign, Inc.`, `Charleston Road Registry Inc.`, etc.
+- RDAP servers for all gTLDs, and some ccTLDs
+
+There is a bit more data beyond what IANA publishes, which can supplement or enrich the raw IANA data, to improve it a bit, and make it easier to understand. For example:
+
+- ccTLD RDAP servers - there are a handful of these that aren't included in the IANA data
+- Parent-Subsidiary groupings for TLD managers, e.g. `VeriSign` has four entities for all the TLDs they manage
+- What do the IDNs mean? 
+- Which IDNs are ccTLDs, and which are generics?
+- Which gTLDs are Open or Closed, or Brand-only? (e.g. `.apple`)
+- Which backend (technical) operators power which TLDs?
+- Are there some friendlier / more recognizable names for TLD Managers? E.g. `Charleston Road Registry Inc.` = Google
+
+We are capturing some of this supplemental data in the `data/supplemental.json` file.
+
 ## Overview
 
 Each night, this project fetches three different [IANA](https://www.iana.org/) data files (related to top-level domains), and stores copies of them in this git repo. They are _small data_, so it's ok.
@@ -50,17 +74,31 @@ We're able to check for changes prior to downloading the files:
 
 ## Todo
 
+**ccTLD + RDAP monitoring**
+- [ ] Checkly monitoring for ccTLD manually added RDAP servers
+- [ ] Checkly public dashboard
+- [ ] curl (or Python)-based monitoring via GH Actions
+
+**Web UI**
+- [ ] Web UI - TLD table view, search box, filters for G vs. CC, IDNs, etc
+- [ ] Web UI - ZoneDB integration to get "brand" tags in here somehow
+- [ ] Web UI - per-data file analysis & view, for verifying the numbers
+
+**Val Town deploy**
 - [ ] Add `data/tlds.json` to source control (it's currently in `gitignore`)
 - [ ] Build step for `tlds.json` in GH Actions
 - [ ] Pre-calculate the "analysis" numbers, so that they aren't re-calculated for every API request
 - [ ] Val Town manual deploy
 - [ ] GH Actions -> Val Town auto-deploys when the data files are updated
-- [ ] Web UI idea - TLD Managers section & breakdown
-- [ ] Web UI idea - TLD table view, search box, filters for G vs. CC, IDNs, etc
-- [ ] Web UI idea - ZoneDB integration to get "brand" tags in here somehow
-- [ ] Lightweight "monitoring" checks for the ccTLD RDAP servers, which don't have the same SLAs as the generics
+
+**Future**
+- [ ] _Something (a bot? etc.)_ to watch all the ccTLD registry websites, for mentions of RDAP, and notify if found
 
 ## Done
+
+2025-11-15:
+- [x] Web UI - TLD Managers section & breakdown
+- [x] Supplemental data - TLD Managers groupings
 
 2025-11-14:
 - [x] TLDs txt file - ignore the first line (timestamp) before saving it
