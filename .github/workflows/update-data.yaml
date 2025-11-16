@@ -28,7 +28,7 @@ jobs:
 
       - name: Build tlds.json
         id: build
-        run: make build
+        run: build-tlds-json
 
       - name: Check for changes
         id: git-check
