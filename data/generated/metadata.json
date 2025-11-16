@@ -17,5 +17,17 @@
     "lastModified": "Fri, 14 Nov 2025 07:07:01 GMT",
     "cacheMaxAge": 557,
     "downloadedAt": "2025-11-14T16:25:50.140Z"
+  },
+  "iana-rdap.json": {
+    "url": "https://data.iana.org/rdap/dns.json",
+    "etag": "\"1182e-642f50662aab6-gzip\"",
+    "lastModified": "Thu, 06 Nov 2025 23:00:01 GMT",
+    "cacheMaxAge": 25840,
+    "downloadedAt": "2025-11-16T00:28:49.881Z"
+  },
+  "iana-root.html": {
+    "url": "https://www.iana.org/domains/root/db",
+    "cacheMaxAge": 21603,
+    "downloadedAt": "2025-11-16T00:28:50.614Z"
   }
 }
