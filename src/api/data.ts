@@ -22,12 +22,12 @@ import {
   analyze_root_zone_db,
   analyze_tlds_file,
   analyze_tlds_json,
-  analyzeManualCcTldData,
+  analyzeSupplementalCcTldData,
   compare_bootstrap_vs_rootzone,
   compare_tlds_vs_rootzone,
   type BootstrapVsRootZoneComparison,
-  type ManualCcTldAnalysis,
-  type ManualRdapEntry,
+  type SupplementalCcTldAnalysis,
+  type SupplementalRdapEntry,
   type RdapCoverageAnalysis,
   type RootZoneAnalysis,
   type TldCounts,
@@ -157,19 +157,19 @@ export async function getSupplementalData(): Promise<import("../analyze.ts").Sup
 }
 
 /**
- * Get manual ccTLD RDAP data
+ * Get supplemental ccTLD RDAP data
  */
-export async function getManualCcTldData(): Promise<ManualRdapEntry[]> {
+export async function getSupplementalCcTldData(): Promise<SupplementalRdapEntry[]> {
   const supplemental = await getSupplementalData();
   return supplemental.ccTldRdapServers;
 }
 
 /**
- * Get analysis of manual ccTLD RDAP data
+ * Get analysis of supplemental ccTLD RDAP data
  */
-export async function getManualCcTldAnalysis(): Promise<ManualCcTldAnalysis> {
-  const data = await getManualCcTldData();
-  return analyzeManualCcTldData(data);
+export async function getSupplementalCcTldAnalysis(): Promise<SupplementalCcTldAnalysis> {
+  const data = await getSupplementalCcTldData();
+  return analyzeSupplementalCcTldData(data);
 }
 
 /**

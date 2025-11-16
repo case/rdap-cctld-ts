@@ -8,13 +8,16 @@ import {
 } from "./main.ts";
 import {
   getBootstrapVsRootZoneComparison,
+  getSupplementalCcTldAnalysis,
   getSourceFilesAnalysis,
   getRdapBootstrapAnalysis,
   getRdapCoverageAnalysis,
   getRootZoneAnalysis,
   getTldsAnalysis,
+  getTldsJsonAnalysis,
   getTldsVsRootZoneComparison,
 } from "./api/index.ts";
+import { FILENAMES, LOCAL_PATHS } from "./config.ts";
 import { load } from "@std/dotenv";
 
 // Load environment variables from .env file if it exists
@@ -296,6 +299,47 @@ Examples:
       console.log(`  "${comp.largestManagerGroup.manager}"`);
 
       console.log();
+      console.log(`Supplemental ccTLD RDAP Data (${LOCAL_PATHS.DATA_DIR}/${FILENAMES.SUPPLEMENTAL}):`);
+
+      const supplementalAnalysis = await getSupplementalCcTldAnalysis();
+
+      createTable()
+        .header(["Metric", "Count"])
+        .body([
+          ["─────────────────────────", "─────"],
+          ["Total ccTLDs", supplementalAnalysis.totalTlds],
+          ["Unique RDAP hosts", supplementalAnalysis.uniqueRdapHosts],
+          ["Unique backend operators", supplementalAnalysis.uniqueBackendOperators],
+        ])
+        .render();
+
+      console.log();
+      console.log(`Top RDAP hosts by TLD count:`);
+
+      const topHosts = supplementalAnalysis.rdapHostGroups.slice(0, 10);
+      createTable()
+        .header(["RDAP Host", "TLD Count", "TLDs"])
+        .body(topHosts.map(group => [
+          group.host,
+          group.tldCount,
+          group.tlds.join(", ")
+        ]))
+        .render();
+
+      console.log();
+      console.log(`Top backend operators by TLD count:`);
+
+      const topOperators = supplementalAnalysis.backendOperatorGroups.slice(0, 10);
+      createTable()
+        .header(["Backend Operator", "TLD Count", "TLDs"])
+        .body(topOperators.map(group => [
+          group.operator,
+          group.tldCount,
+          group.tlds.join(", ")
+        ]))
+        .render();
+
+      console.log();
       return;
     }
 
@@ -331,6 +375,7 @@ Examples:
       }
       case "root-zone-db-html": {
         const analysis = await getRootZoneAnalysis();
+        const tldsJsonAnalysis = await getTldsJsonAnalysis();
 
         console.log("\n=== Root Zone Database Analysis ===");
         console.log(`Total TLDs:    ${analysis.total}`);
@@ -354,6 +399,55 @@ Examples:
           `  Infrastructure:     ${analysis.byCategory["infrastructure"]}`,
         );
         console.log(`  Test:               ${analysis.byCategory["test"]}`);
+
+        console.log();
+        console.log("TLD Manager Groupings:");
+
+        const mgr = tldsJsonAnalysis.managerGrouping;
+
+        createTable()
+          .header(["Metric", "Count"])
+          .body([
+            ["─────────────────────────", "─────"],
+            ["Total unique managers", mgr.totalUniqueManagers],
+            ["Managers with 2+ TLDs", mgr.managersWithMultipleTlds],
+          ])
+          .render();
+
+        console.log();
+        console.log(`Top TLD managers by TLD count:`);
+
+        const topManagers = mgr.managerGroups.slice(0, 15);
+
+        // Build table rows with hierarchy
+        const tableRows: Array<[string, number, number, number]> = [];
+        for (const group of topManagers) {
+          // Add the parent/alias row
+          tableRows.push([
+            group.manager,
+            group.tldCount,
+            group.ccTldCount,
+            group.gTldCount
+          ]);
+
+          // Add subsidiary rows if this is an alias group
+          if (group.isAlias && group.subsidiaries) {
+            for (const subsidiary of group.subsidiaries) {
+              tableRows.push([
+                `  - ${subsidiary.name}`,
+                subsidiary.tldCount,
+                subsidiary.ccTldCount,
+                subsidiary.gTldCount
+              ]);
+            }
+          }
+        }
+
+        createTable()
+          .header(["TLD Manager", "Total", "ccTLDs", "gTLDs"])
+          .body(tableRows)
+          .render();
+
         break;
       }
       case "bootstrap-vs-rootdb": {

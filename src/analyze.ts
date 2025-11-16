@@ -598,9 +598,9 @@ interface EnhancedTldJson {
 }
 
 /**
- * Manual ccTLD RDAP entry
+ * Supplemental ccTLD RDAP entry
  */
-export interface ManualRdapEntry {
+export interface SupplementalRdapEntry {
   tld: string;
   rdapServer: string;
   backendOperator: string;
@@ -621,14 +621,14 @@ export interface ManagerAliasEntry {
  * Supplemental data structure
  */
 export interface SupplementalData {
-  ccTldRdapServers: ManualRdapEntry[];
+  ccTldRdapServers: SupplementalRdapEntry[];
   managerAliases: Record<string, ManagerAliasEntry[]>;
 }
 
 /**
- * Analysis of manual ccTLD RDAP data
+ * Analysis of supplemental ccTLD RDAP data
  */
-export interface ManualCcTldAnalysis {
+export interface SupplementalCcTldAnalysis {
   totalTlds: number;
   uniqueRdapHosts: number;
   uniqueBackendOperators: number;
@@ -650,19 +650,19 @@ export interface ManualCcTldAnalysis {
  * This function assembles a comprehensive TLD dataset that includes:
  * - Only delegated TLDs from Root Zone DB
  * - TLD type (gtld/cctld) classification
- * - RDAP server information from IANA bootstrap + manual ccTLD data
+ * - RDAP server information from IANA bootstrap + supplemental ccTLD data
  * - IDN information (both ASCII/punycode and Unicode variants)
  * - Grouped by RDAP server to avoid URL duplication
  *
  * @param rdapServices - Services array from IANA RDAP bootstrap JSON
  * @param rootZoneContent - HTML content of Root Zone Database
- * @param manualCcTldData - Manual ccTLD RDAP server data (optional)
+ * @param supplementalCcTldData - Supplemental ccTLD RDAP server data (optional)
  * @returns Enhanced TLD JSON structure
  */
 export async function build_tlds_json(
   rdapServices: unknown[],
   rootZoneContent: string,
-  manualCcTldData?: ManualRdapEntry[],
+  supplementalCcTldData?: SupplementalRdapEntry[],
 ): Promise<EnhancedTldJson> {
   const { toASCII, toUnicode } = await import("ts-punycode");
 
@@ -723,9 +723,9 @@ export async function build_tlds_json(
     }
   }
 
-  // Add manual ccTLD RDAP data
-  if (manualCcTldData) {
-    for (const entry of manualCcTldData) {
+  // Add supplemental ccTLD RDAP data
+  if (supplementalCcTldData) {
+    for (const entry of supplementalCcTldData) {
       const cleanTld = entry.tld.toLowerCase();
       // Only add if it's a delegated ccTLD
       if (tldTypeMap.has(cleanTld) && tldTypeMap.get(cleanTld) === "cctld") {
@@ -1151,11 +1151,11 @@ function analyzeManagerGrouping(
 }
 
 /**
- * Analyze manual ccTLD RDAP data
+ * Analyze supplemental ccTLD RDAP data
  */
-export function analyzeManualCcTldData(
-  data: ManualRdapEntry[],
-): ManualCcTldAnalysis {
+export function analyzeSupplementalCcTldData(
+  data: SupplementalRdapEntry[],
+): SupplementalCcTldAnalysis {
   // Group by RDAP host (extract hostname from URL)
   const hostToTlds = new Map<string, string[]>();
 

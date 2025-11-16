@@ -193,15 +193,15 @@ Deno.test("analyze_root_zone_db - counts IDNs correctly", async () => {
   assertEquals(result.idnBreakdown.unicode >= 2, true);
 });
 
-Deno.test("manual ccTLD file has no duplicates with IANA RDAP bootstrap (production data)", async () => {
+Deno.test("supplemental ccTLD file has no duplicates with IANA RDAP bootstrap (production data)", async () => {
   // Load IANA RDAP bootstrap from production data
   const rdapContent = await Deno.readTextFile("data/canonical/iana-rdap.json");
   const rdapData = JSON.parse(rdapContent);
 
-  // Load manual ccTLD data from production data
+  // Load supplemental ccTLD data from production data
   const supplementalContent = await Deno.readTextFile("data/supplemental.json");
   const supplementalData = JSON.parse(supplementalContent);
-  const manualData = supplementalData.ccTldRdapServers;
+  const supplementalCcTldData = supplementalData.ccTldRdapServers;
 
   // Extract TLDs from IANA RDAP bootstrap
   const rdapTlds = new Set<string>();
@@ -214,22 +214,22 @@ Deno.test("manual ccTLD file has no duplicates with IANA RDAP bootstrap (product
     }
   }
 
-  // Extract TLDs from manual ccTLD file
-  const manualTlds: string[] = [];
-  for (const entry of manualData) {
+  // Extract TLDs from supplemental ccTLD file
+  const supplementalTlds: string[] = [];
+  for (const entry of supplementalCcTldData) {
     // Handle both array format (tlds) and single format (tld)
     if (entry.tlds && Array.isArray(entry.tlds)) {
       for (const tld of entry.tlds) {
-        manualTlds.push(tld.toLowerCase());
+        supplementalTlds.push(tld.toLowerCase());
       }
     } else if (entry.tld) {
-      manualTlds.push(entry.tld.toLowerCase());
+      supplementalTlds.push(entry.tld.toLowerCase());
     }
   }
 
   // Check for duplicates
   const duplicates: string[] = [];
-  for (const tld of manualTlds) {
+  for (const tld of supplementalTlds) {
     if (rdapTlds.has(tld)) {
       duplicates.push(tld);
     }

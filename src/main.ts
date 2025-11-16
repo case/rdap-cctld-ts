@@ -141,22 +141,22 @@ export async function build_and_save_tlds_json(): Promise<void> {
   // Read Root Zone DB HTML
   const rootZoneContent = await get_data_from_file(FILENAMES.ROOT_ZONE_DB);
 
-  // Read supplemental data (ccTLD RDAP servers)
-  let manualCcTldData;
+  // Read supplemental data (includes ccTLD RDAP servers and manager aliases)
+  let supplementalCcTldData;
   try {
     const supplementalContent = await get_data_from_file(FILENAMES.SUPPLEMENTAL, LOCAL_PATHS.DATA_DIR);
     const supplementalData = JSON.parse(supplementalContent);
-    manualCcTldData = supplementalData.ccTldRdapServers || [];
+    supplementalCcTldData = supplementalData.ccTldRdapServers || [];
   } catch (error) {
     console.warn(`⚠ Could not load supplemental data: ${error}`);
-    manualCcTldData = [];
+    supplementalCcTldData = [];
   }
 
   // Build the enhanced TLD JSON
   const enhancedData = await build_tlds_json(
     rdapBootstrap.services,
     rootZoneContent,
-    manualCcTldData
+    supplementalCcTldData
   );
 
   // Save to generated directory
