@@ -1,6 +1,6 @@
 {
   "description": "All delegated top-level domains, and their RDAP servers",
-  "generated": "2025-11-16T00:15:48Z",
+  "generated": "2025-11-20T02:37:09Z",
   "services": [
     {
       "tlds": [
@@ -5812,7 +5812,7 @@
           "type": "cctld",
           "idn": null,
           "tags": [],
-          "manager": "National Agency for Network Services (NANS)"
+          "manager": "National Authority for Information Technology Services (NAITS)"
         },
         {
           "tld": "sz",
@@ -6395,7 +6395,7 @@
             "unicode": "سورية"
           },
           "tags": [],
-          "manager": "National Agency for Network Services (NANS)"
+          "manager": "National Authority for Information Technology Services (NAITS)"
         },
         {
           "tld": "xn--p1ai",
